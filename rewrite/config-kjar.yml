@@ -1,0 +1,62 @@
+---
+# location of the various spectrum files
+data dir: ../../data/
+
+# one of (legendre, dhg, constant)
+phase function:
+  type: legendre
+  coefficients:
+    -
+      guess: 0.1
+      bounds: [-1.7, 1.7]
+    -
+      guess: 0.3
+      bounds: [-1, 1]
+
+# one of (isotropic, lambertian)
+scattering model:
+  type: isotropic
+  filling factor: 0.46
+  internal scattering:
+    guess: 0
+    bounds: [0, 0.06]
+  calibration spectrum: calspec_full.mat
+
+parameters:
+  mean reflectance: 1.76575
+  anchor wavelength: 0.58929
+  opposition surge: 0
+
+dispersion:
+  bounds: [1.0e-8, 0.1]
+  MIR k: kjar_110813_disp_k.mat
+  MIR v: kjar_110813_disp_v.mat
+
+preprocessing:
+  crop: [0.405, 2.451]
+  extrapolate:
+    polynomial order: 0
+    bounds: [0.301, 2.451]
+
+spectra:
+  -
+    filename: kjs.mat
+    thetai: -30
+    thetae: 0
+    grain size:
+      guess: 45
+      bounds: [10, 63]
+  -
+    filename: kjm.mat
+    thetai: -30
+    thetae: 0
+    grain size:
+      guess: 63
+      bounds: [21, 90]
+  -
+    filename: kjb.mat
+    thetai: -30
+    thetae: 0
+    grain size:
+      guess: 90
+      bounds: [30, 125]

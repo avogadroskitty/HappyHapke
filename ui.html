@@ -1,0 +1,531 @@
+<html>
+<head>
+<title>Happy Hapke</title>
+<link rel="stylesheet" href="_static/css/page.css" type="text/css">
+<link rel="stylesheet" href="_static/css/boilerplate.css" type="text/css">
+<link rel="stylesheet" href="_static/css/fbm.css" type="text/css">
+<link rel="stylesheet" href="_static/jquery/css/themes/base/jquery-ui.min.css">
+<link rel="stylesheet" href="{{ static_url('styles.css') }}">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
+<script src="mpl.js"></script>
+<script src="{{ static_url('details-shim.js') }}"></script>
+<script src="{{ static_url('web_ui.js') }}"></script>
+<script type="text/javascript">
+function remove_phase_inputs(btn) {
+  var div = $(btn).parent();
+  if ($('.phase_inputs').length === 1) {
+    $(':input', div).not(':button,:submit,:reset,:hidden').val('');
+  } else {
+    div.remove();
+  }
+  return false;
+}
+$(document).ready(WebUI('{{host}}', '{{uid}}'));
+</script>
+</head>
+<body>
+
+<!--
+...#
+..##
+.#.#
+...#
+...#
+...#
+.#####
+-->
+<details open='open'>
+<summary><span class='heading'>Initialization</span></summary>
+<form method='POST' enctype='multipart/form-data'>
+<section>
+<div class='param_group'>
+<p>Data files containing a single matrix each.
+Either Matlab (.mat) format or ASCII text format is accepted.
+Wavelength units should be either nm or microns (not wavenumbers).</p>
+<label><input type='file' name='small_file' />VNIR spectrum (small grain)</label>
+<label><input type='file' name='medium_file' />VNIR spectrum (medium grain)</label>
+<label><input type='file' name='large_file' />VNIR spectrum (large grain)</label>
+<div id='addFiles'></div>
+<span id='lnkAddMore'> Add More </span>
+<label><input type='file' name='specwave_file' />Calibration wavelength</label>
+<label><input type='file' name='calspec_file' />Calibration spectrum</label>
+</div>
+<script>
+  //Adding javascript for Section One
+  $('#lnkAddMore').click(function(){
+    var fileElements = $('#addFiles input.fileElement');
+    var index = (fileElements.length  + 1);
+    console.log(index);
+    if(fileElements.length < 7){
+      $('#addFiles').append('<label><input class="fileElement" type="file" name=file'+index+' />VNIR Spectrum - '+index+'</label>');
+    }
+  });
+</script>
+<div class='param_group'>
+<p>Known variables</p>
+<label>
+  <input name='thetai' type='number' step='any' min='-360' max=360 value='-30' />
+  Incident angle (&theta;<sub>i</sub>), in degrees.
+</label>
+<label>
+  <input name='thetae' type='number' step='any' min='-360' max=360 value=0 />
+  Emission angle (&theta;<sub>e</sub>), in degrees.
+</label>
+<label>
+  <!-- <input name='n1' type='number' step='any' value='1.76575' /> -->
+  <input name='n1' type='number' step='any' value='1.5725' />
+  Average n, usually at the sodium D line.
+</label>
+<label>
+  <input name='Bg' type='number' step='any' value=0 />
+  Opposition surge (B<sub>g</sub>), can be zero
+  if |&theta;<sub>i</sub> - &theta;<sub>e</sub>| &gt; 15.
+</label>
+<!-- <label>
+  <input name='QE' type='number' step='any' value=1 />
+  Extinction efficiency, set to 1 for closely-spaced particles.
+</label> -->
+</div>
+
+<div class='param_group'>
+<p>Modeling choices</p>
+<label><select name='phase_fn'>
+  <option value='legendre'>Legendre Polynomial</option>
+  <option value='dhg'>Double Heyney-Greenstein</option>
+  <option value='constant'>Constant (1)</option>
+</select> Phase function
+</label>
+<label><select name='scatter_type'>
+  <option value='isotropic'>Isotropic</option>
+  <option selected value='lambertian'>Lambertian</option>
+</select> Scattering model
+</label>
+</div>
+</section>
+
+<input name='section' type='hidden' value='initialize' />
+<input type='submit' value='Run' />
+</form>
+<div class='results'></div>
+</details>
+
+<!--
+.#####
+#.....#
+......#
+.#####
+#
+#
+#######
+-->
+<details>
+<summary><span class='heading'>Preprocessing</span></summary>
+<form method='POST'>
+<section>
+<div class='param_group'>
+<p>Usable range of wavelengths (in microns).
+Use the plots above to determine good cutoffs.</p>
+<label>
+  <!-- <input name='low' type='number' step='any' value='0.405' /> -->
+  <input name='low' type='number' step='any' value='0.35' />
+  Lower bound of good region.
+</label>
+<label>
+  <!-- <input name='high' type='number' step='any' value='2.451' /> -->
+  <input name='high' type='number' step='any' value='2.450' />
+  Upper bound of good region.
+</label>
+<label>
+  <!-- <input name='UV' type='number' step='any' value='0.301' /> -->
+  <input name='UV' type='number' step='any' value='0.3' />
+  Lower bound after extrapolating the cropped spectrum.
+</label>
+</div>
+
+<div class='param_group'>
+<p>Interpolation options</p>
+<label>
+  <!-- <input name='fit_order' type='number' step=1 value=0 min=0 max=5> -->
+  <input name='fit_order' type='number' step=1 value=2 min=0 max=5>
+  Polynomial order.
+</label>
+</div>
+</section>
+
+<input name='section' type='hidden' value='preprocess' />
+<input type='submit' value='Run' disabled />
+</form>
+<div class='results'></div>
+</details>
+
+<!--
+.#####
+#.....#....##
+......#...#..#
+.#####...#....#
+......#..######
+#.....#..#....#
+.#####...#....#
+-->
+<details>
+<summary><span class='heading'>Solve for <i>k</i> (small)</span></summary>
+<form method='POST'>
+<section>
+<div class='param_group'>
+<p>Hapke parameters</p>
+<label>
+  <input name='b' type='number' step='any' value='0.1' />
+  Coefficient b of Legendre polynomial.
+</label>
+<label>
+  <input name='c' type='number' step='any' value='0.3' />
+  Coefficient c of Legendre polynomial.
+</label>
+<label>
+  <input name='ff' type='number' step='any' value='0.46' />
+  Filling factor.
+</label>
+<label>
+  <input name='s' type='number' step='any' value='0' />
+  Internal scattering.
+</label>
+<label>
+  <!-- <input name='D' type='number' step='any' value='45' min='0' /> -->
+  <input name='D' type='number' step='any' value='63' min='0' />
+  Grain size.
+</label>
+</div>
+</section>
+
+<input name='key' type='hidden' value='sml' />
+<input name='section' type='hidden' value='solve_for_k' />
+<input type='submit' value='Run' disabled />
+</form>
+<div class='results'></div>
+</details>
+
+<!--
+.#####
+#.....#..#####
+......#..#....#
+.#####...#####
+......#..#....#
+#.....#..#....#
+.#####...#####
+-->
+<details>
+<summary><span class='heading'>Solve for <i>k</i> (medium)</span></summary>
+<form method='POST'>
+<section>
+<div class='param_group'>
+<p>Hapke parameters</p>
+<label>
+  <input name='b' type='number' step='any' value='0.1' />
+  Coefficient b of Legendre polynomial.
+</label>
+<label>
+  <input name='c' type='number' step='any' value='0.3' />
+  Coefficient c of Legendre polynomial.
+</label>
+<label>
+  <input name='ff' type='number' step='any' value='0.46' />
+  Filling factor.
+</label>
+<label>
+  <input name='s' type='number' step='any' value='0' />
+  Internal scattering.
+</label>
+<label>
+  <!-- <input name='D' type='number' step='any' value='63' min='0' /> -->
+  <input name='D' type='number' step='any' value='106' min='0' />
+  Grain size.
+</label>
+</div>
+</section>
+
+<input name='key' type='hidden' value='med' />
+<input name='section' type='hidden' value='solve_for_k' />
+<input type='submit' value='Run' disabled />
+</form>
+<div class='results'></div>
+</details>
+
+<!--
+.#####
+#.....#...####
+......#..#....#
+.#####...#
+......#..#
+#.....#..#....#
+.#####....####
+-->
+<details>
+<summary><span class='heading'>Solve for <i>k</i> (large)</span></summary>
+<form method='POST'>
+<section>
+<div class='param_group'>
+<p>Hapke parameter estimates.</p>
+<label>
+  <input name='b' type='number' step='any' value='-0.1' />
+  Coefficient b of Legendre polynomial.
+</label>
+<label>
+  <input name='c' type='number' step='any' value='0.3' />
+  Coefficient c of Legendre polynomial.
+</label>
+<label>
+  <input name='ff' type='number' step='any' value='0.46' />
+  Filling factor.
+</label>
+<label>
+  <input name='s' type='number' step='any' value='0' />
+  Internal scattering.
+</label>
+<label>
+  <!-- <input name='D' type='number' step='any' value='90' min='0' /> -->
+  <input name='D' type='number' step='any' value='150' min='0' />
+  Grain size.
+</label>
+</div>
+</section>
+
+<input name='key' type='hidden' value='big' />
+<input name='section' type='hidden' value='solve_for_k' />
+<input type='submit' value='Run' disabled />
+</form>
+<div class='results'></div>
+</details>
+
+<!--
+#
+#....#
+#....#
+#######
+.....#
+.....#
+.....#
+-->
+<details>
+<summary><span class='heading'>Solve for <i>k</i> (global)</span></summary>
+<form method='POST'>
+<section>
+<div class='param_group'>
+<p>Optimization Parameters</p>
+<label>
+  <select name='guess_key'>
+    <option value='sml'>Small grain</option>
+    <option value='med' selected>Medium grain</option>
+    <option value='big'>Large grain</option>
+  </select>
+  Previous section to take the initial guess for k from.
+</label>
+<label>
+  <input name='lowk' type='number' step='any' value='1e-8' />
+  <input name='upk' type='number' step='any' value='0.1' />
+  Lower/upper bounds for each value in k.
+</label>
+<br>
+<label>
+  <select name='opt_strategy' onchange='$(".opt_strat_desc").toggle()'>
+    <option value='fast' selected>Alternating minimization</option>
+    <option value='slow'>Single minimization (slow)</option>
+  </select>
+  Optimization strategy.
+</label>
+<label>
+  <input name='num_solns' type='number' step='1' min='1' value='2' />
+  <span class='opt_strat_desc'>
+    Number of iterations to perform (each one takes ~30 seconds).
+  </span>
+  <span class='opt_strat_desc' style='display:none;'>
+    Number of random start points to initialize with.
+  </span>
+</label>
+</div>
+
+<div class='param_group'>
+<p>Bounds on Hapke parameters for small, medium, and large grain sizes.</p>
+<div>Coefficient b of Legendre polynomial:</div>
+<label>
+  <input name='lowb1' type='number' step='any' value='-1.7' />
+  <input name='lowb2' type='number' step='any' value='-1.7' />
+  <input name='lowb3' type='number' step='any' value='-1.7' />
+  Lower bounds.
+</label>
+<label>
+  <input name='upb1' type='number' step='any' value='1.7' />
+  <input name='upb2' type='number' step='any' value='1.7' />
+  <input name='upb3' type='number' step='any' value='1.7' />
+  Upper bounds.
+</label>
+<div>Coefficient c of Legendre polynomial:</div>
+<label>
+  <input name='lowc1' type='number' step='any' value='-1.0' />
+  <input name='lowc2' type='number' step='any' value='-1.0' />
+  <input name='lowc3' type='number' step='any' value='-1.0' />
+  Lower bounds.
+</label>
+<label>
+  <input name='upc1' type='number' step='any' value='1.0' />
+  <input name='upc2' type='number' step='any' value='1.0' />
+  <input name='upc3' type='number' step='any' value='1.0' />
+  Upper bounds.
+</label>
+<div>Internal scattering:</div>
+<label>
+  <input name='lows1' type='number' step='any' value='0' />
+  <input name='lows2' type='number' step='any' value='0' />
+  <input name='lows3' type='number' step='any' value='0' />
+  Lower bounds.
+</label>
+<label>
+  <input name='ups1' type='number' step='any' value='0.06' />
+  <input name='ups2' type='number' step='any' value='0.06' />
+  <input name='ups3' type='number' step='any' value='0.06' />
+  Upper bounds.
+</label>
+<div>Grain size:</div>
+<label>
+  <!-- <input name='lowD1' type='number' step='any' value='10' min='0' /> -->
+  <!-- <input name='lowD2' type='number' step='any' value='21' min='0' /> -->
+  <!-- <input name='lowD3' type='number' step='any' value='30' min='0' /> -->
+  <input name='lowD1' type='number' step='any' value='21' min='0' />
+  <input name='lowD2' type='number' step='any' value='35' min='0' />
+  <input name='lowD3' type='number' step='any' value='50' min='0' />
+  Lower bounds.
+</label>
+<label>
+  <!-- <input name='upD1' type='number' step='any' value='63' min='0' /> -->
+  <!-- <input name='upD2' type='number' step='any' value='90' min='0' /> -->
+  <!-- <input name='upD3' type='number' step='any' value='125' min='0' /> -->
+  <input name='upD1' type='number' step='any' value='106' min='0' />
+  <input name='upD2' type='number' step='any' value='150' min='0' />
+  <input name='upD3' type='number' step='any' value='180' min='0' />
+  Upper bounds.
+</label>
+</div>
+</section>
+
+<input name='section' type='hidden' value='optimize_global_k' />
+<input type='submit' value='Run' disabled />
+</form>
+<div class='results'></div>
+</details>
+
+<!--
+#######
+#
+#
+.#####
+......#
+#.....#
+.#####
+-->
+<details>
+<summary><span class='heading'>Add in MIR data</span></summary>
+<form method='POST' enctype='multipart/form-data'>
+<section>
+<div class='param_group'>
+<p>Matlab MAT-files containing a single matrix each.
+Wavelength units should be either nm or microns (not wavenumbers).</p>
+<label><input type='file' name='mirk_file' />MIR wavelength (v)</label>
+<label><input type='file' name='mirv_file' />MIR dispersion (k)</label>
+</div>
+</section>
+
+<input name='section' type='hidden' value='add_mir_data' />
+<input type='submit' value='Run' disabled />
+</form>
+<div class='results'></div>
+</details>
+
+<!--
+.#####
+#.....#
+#
+######
+#.....#
+#.....#
+.#####
+-->
+<details>
+<summary><span class='heading'>Compute index of refraction (Kramers-Kronig)</span></summary>
+<form method='POST'>
+<section>
+<div class='param_group'>
+<p>Known variables</p>
+<label>
+  <input name='anchor' type='number' step='any' value='0.58929' />
+  Anchor wavelength, at which the average n (above) was determined.
+</label>
+</div>
+</section>
+
+<input name='section' type='hidden' value='run_sskk' />
+<input type='submit' value='Run' disabled />
+</form>
+<div class='results'></div>
+</details>
+
+<!--
+#######
+#....#
+....#
+...#
+..#
+..#
+..#
+-->
+<details>
+<summary><span class='heading'>Optimize phase function parameters</span></summary>
+<form method='POST'>
+<section>
+<div class='param_group'>
+<p>VNIR spectra of the same samples at different phase angles.</p>
+<div class='phase_inputs'>
+<button type='button' onclick='remove_phase_inputs(this)'>x</button>
+<div>
+<label><input type='file' name='phase_files[]' />Spectrum file.</label>
+<label>
+  <input name='phase_thetai[]' type='number' step='any' min='-360' max=360 />
+  Incident angle (&theta;<sub>i</sub>), in degrees.
+</label>
+<label>
+  <input name='phase_thetae[]' type='number' step='any' min='-360' max=360 />
+  Emission angle (&theta;<sub>e</sub>), in degrees.
+</label>
+<label>
+  <select name='phase_sizes[]'>
+    <option value='sml' selected>Small</option>
+    <option value='med'>Medium</option>
+    <option value='big'>Large</option>
+  </select>
+  Grain size.
+</label>
+</div>
+</div>
+<button type='button' onclick='$(this).prev().clone().insertBefore(this);'>
+  Add another file
+</button>
+</div>
+
+<!--
+<div class='param_group'>
+<p>Downsampling options</p>
+<label>
+  <input name='downsample_factor' type='number' step='any' value=1 min=1 />
+  Downsampling factor. (2 = half as many wavelengths)
+</label>
+</div>
+-->
+</section>
+
+<input name='section' type='hidden' value='solve_phase' />
+<input type='submit' value='Run' disabled />
+</form>
+<div class='results'></div>
+</details>
+
+</body>
+</html>

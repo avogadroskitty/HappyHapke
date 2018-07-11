@@ -1,0 +1,60 @@
+---
+# location of the various spectrum files
+data dir: ../../data/
+
+# one of (legendre, dhg, constant)
+phase function:
+  type: legendre
+  coefficients:
+    -
+      guess: 0.1
+      bounds: [-1.7, 1.7]
+    -
+      guess: 0.3
+      bounds: [-1, 1]
+
+# one of (isotropic, lambertian)
+scattering model:
+  type: lambertian
+  internal scattering:
+    guess: 0
+    bounds: [0, 0.06]
+
+parameters:
+  mean reflectance: 1.5725
+  anchor wavelength: 0.58929
+  opposition surge: 0
+
+dispersion:
+  bounds: [1.0e-8, 0.01]
+  MIR k: bytMIRk.mat
+  MIR v: bytMIRv.mat
+
+preprocessing:
+  crop: [0.35, 2.45]
+  extrapolate:
+    polynomial order: 2
+    bounds: [0.3, 2.45]
+
+spectra:
+  -
+    filename: BytWS63106i30e0.asc
+    thetai: -30
+    thetae: 0
+    grain size:
+      guess: 63
+      bounds: [21, 106]
+  -
+    filename: BytWM106150i30e0.asc
+    thetai: -30
+    thetae: 0
+    grain size:
+      guess: 106
+      bounds: [35, 160]
+  -
+    filename: BytWB150180i30e0.asc
+    thetai: -30
+    thetae: 0
+    grain size:
+      guess: 150
+      bounds: [50, 180]

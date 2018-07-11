@@ -1,0 +1,102 @@
+summary {
+  font-size: x-large;
+  font-family: sans-serif;
+  font-weight: bold;
+  display: block;
+  cursor: pointer;
+  background-color: #f6a828;
+  text-align: center;
+  border-bottom: 1px solid black;
+}
+.heading {
+  min-width: 45vw;
+  text-align: left;
+  display: inline-block;
+}
+form {
+  display: flex;
+  flex-flow: column nowrap;
+}
+section {
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: space-around;
+  align-items: flex-start;
+}
+.param_group {
+  display: table;
+}
+.param_group p {
+  display: table-caption;
+  font-style: italic;
+  font-weight: bold;
+  font-family: sans-serif;
+  margin: 1em 0 0 0;
+}
+.param_group label {
+  display: table-row;
+}
+input[type='number'] {
+  width: 10ch;
+}
+input[type='submit'] {
+  margin: 1em auto 0 auto;
+  width: 33%;
+}
+.phase_inputs {
+  display: flex;
+  padding-bottom: 1em;
+}
+.figure > div {
+  text-align: left;
+}
+.results {
+  text-align: center;
+  padding-bottom: 1em;
+}
+.results table {
+  margin: 0.5em 1em;
+}
+.results th {
+  font-weight: bold;
+  border-bottom: 3px double black;
+  border-right: 1px solid black;
+  padding: 0 1em;
+}
+.results td {
+  text-align: right;
+  border-right: 1px solid black;
+  padding: 0.25em 0.5em;
+}
+.results th:last-child, td:last-child {
+  border-right: none;
+  text-align: left;
+}
+
+.err_msg { color: red; }
+.err_msg::before { content: "Error: "; }
+
+details { display: block; }
+/* Shim for <details> on non-Chrome browsers */
+details.details_shim_closed > * {display: none;}
+details.details_shim_closed > summary {display: block;}
+details.details_shim_open   > summary {display: block;}
+details.details_shim_closed > summary:before {
+  display: inline-block;
+  content: "\25b6";
+  padding: 0 0.1em;
+  margin-right: 0.4em;
+  font-size: 0.9em;
+}
+details.details_shim_open > summary:before {
+  display: inline-block;
+  content: "\25bc";
+  padding: 0;
+  margin-right: 0.35em;
+}
+
+/*****************************/
+
+/*** CSS added by Aish ****/
+#lnkAddMore{color:#4286f4; text-decoration: none; cursor: pointer; transition-duration: 0.3s}
+#lnkAddMore:hover{color: #1d50a3; text-decoration: underline; transition-duration: 0.3s}
