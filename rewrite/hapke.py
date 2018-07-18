@@ -4,7 +4,7 @@ import numpy as np
 
 __all__ = ['get_hapke_model']
 
-
+#The base Hapke Model
 def get_hapke_model(phase_fn='legendre', scatter='isotropic'):
   if phase_fn == 'legendre':
     phase_mixin = LegendrePhaseMixin

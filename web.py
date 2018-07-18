@@ -2,6 +2,7 @@
 from __future__ import division, print_function
 import io
 import logging
+import json
 import os
 import tornado.ioloop
 import tornado.web
@@ -24,7 +25,7 @@ rc('axes.spines', top=False)
 #Main Program that runs the server on the local machine on the specified port
 def main():
   ap = ArgumentParser()
-  ap.add_argument('--port', type=int, default=8888, help='Port. [%(default)s]')
+  ap.add_argument('--port', type=int, default=41414, help='Port. [%(default)s]')
   args = ap.parse_args()
 
   logging.basicConfig(level=logging.INFO)
@@ -40,7 +41,7 @@ def main():
   except KeyboardInterrupt:
     print('Server shutting down.')
 
-#Handles the incoming reuest
+#Handles the incoming request
 class HapkeHandler(tornado.web.RequestHandler):
   def get(self):
     if bool(int(self.get_argument('dl', 0))):
@@ -54,6 +55,7 @@ class HapkeHandler(tornado.web.RequestHandler):
     state = self.application.prog_states[uid]
     param = self.get_argument('p')
     fname, mimetype, data = state._download_data(param)
+    print(data)
     self.set_header('Content-Type', mimetype)
     self.set_header('Content-Disposition', 'attachment; filename=' + fname)
     self.write(data)
@@ -97,6 +99,7 @@ class HapkeHandler(tornado.web.RequestHandler):
       return
     # start returning html to the frontend
     self.write('<div>')
+    self.write('<input type="hidden" id="uid_val" value="%s" />' % uid);
     if message:
       self.write(message)
     if dl_param:

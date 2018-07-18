@@ -56,7 +56,7 @@ def preprocess_traj(traj, low, high, UV, fit_order=0):
   wave, spec = prepare_spectrum(wave, spec, low, high)
   return fit_left_side(wave, spec, UV, fit_order=fit_order)
 
-
+#Solving for K - Logic -- setup the matrices here. For plotting get values from the hapke object - defined in hapke_model.py
 def MasterHapke1_PP(hapke, traj, b, c, ff, s, D, debug_plots=False):
   wavelength, reflect = traj.T
   table_size = len(traj) * 2

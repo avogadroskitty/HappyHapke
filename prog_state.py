@@ -24,9 +24,13 @@ class ProgramState(object):
     # small_file = small_file or '../data/kjs.mat'
     # medium_file = medium_file or '../data/kjm.mat'
     # large_file = large_file or '../data/kjb.mat'
-    small_file = small_file or '../data/BytWS63106i30e0.asc'
+
+    small_file = small_file or '../data/BytWS63106i30e0.asc' 
     medium_file = medium_file or '../data/BytWM106150i30e0.asc'
     large_file = large_file or '../data/BytWB150180i30e0.asc'
+
+    #-^Above^-Default file names defined here also used in ui.html for solve for K - dropdown. If changed here must be changed there as well.
+
     self.file_key_list = ['file1','file2','file3','file4','file5','file6','file7']
     # initialize the model
     HapkeModel = get_hapke_model(phase_fn=phase_fn, scatter=scatter_type)
@@ -121,15 +125,20 @@ class ProgramState(object):
     #pp is the parameter used for identifying the download data.
     return 'Preprocessing complete: ', 'pp', [fig]
 
+  #Section Two by Default, Section Three and Four - Matlab Code
   def solve_for_k(self, key='sml', b=0, c=0, ff=0, s=0, D=0):
     b, c, s, D, ff = map(float, (b, c, s, D, ff))
     self.guesses[key] = (b, c, s, D, ff)
     traj = self.pp_spectra[key]
     plt.close('all')  # hack!
+    #The hidden treasure where all the brains are hidden
     self.ks[key] = analysis.MasterHapke1_PP(
         self.hapke_scalar, traj, b, c, ff, s, D, debug_plots=True)
     figures = [plt.figure(i) for i in plt.get_fignums()]
     return 'Solved for k: ', 'k-' + key, figures
+
+  def get_loaded_samples(self):
+    return list(self.pp_spectra.keys())
 
   def optimize_global_k(self, guess_key='med', opt_strategy='fast',
                         lowb1=0, lowb2=0, lowb3=0, upb1=0, upb2=0, upb3=0,
@@ -344,7 +353,8 @@ class ProgramState(object):
     elif param.startswith('k-'):
       key = param.split('-', 1)[1]
       fname = 'k_%s.txt' % names[key]
-      return fname, 'text/plain', _vec2bytes(self.ks[key])
+      print_vec = _vec2bytes(self.ks[key])
+      return fname, 'text/plain', print_vec
     elif param == 'dispersion':
       return 'combined_k.txt', 'text/plain', _traj2bytes(self.dispersion)
     elif param == 'n':
@@ -358,4 +368,4 @@ def _traj2bytes(traj):
 
 
 def _vec2bytes(arr):
-  return b'\n'.join(repr(x) for x in arr)
+  return b'\n'.join(b'%r' % x for x in arr)

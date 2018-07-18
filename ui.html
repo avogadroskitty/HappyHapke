@@ -43,9 +43,9 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
 <p>Data files containing a single matrix each.
 Either Matlab (.mat) format or ASCII text format is accepted.
 Wavelength units should be either nm or microns (not wavenumbers).</p>
-<label><input type='file' name='small_file' />VNIR spectrum (small grain)</label>
-<label><input type='file' name='medium_file' />VNIR spectrum (medium grain)</label>
-<label><input type='file' name='large_file' />VNIR spectrum (large grain)</label>
+<label><input type='file' class="fileElement" name='small_file' />VNIR spectrum (small grain)</label>
+<label><input type='file' class="fileElement" name='medium_file' />VNIR spectrum (medium grain)</label>
+<label><input type='file' class="fileElement" name='large_file' />VNIR spectrum (large grain)</label>
 <div id='addFiles'></div>
 <span id='lnkAddMore'> Add More </span>
 <label><input type='file' name='specwave_file' />Calibration wavelength</label>
@@ -56,7 +56,6 @@ Wavelength units should be either nm or microns (not wavenumbers).</p>
   $('#lnkAddMore').click(function(){
     var fileElements = $('#addFiles input.fileElement');
     var index = (fileElements.length  + 1);
-    console.log(index);
     if(fileElements.length < 7){
       $('#addFiles').append('<label><input class="fileElement" type="file" name=file'+index+' />VNIR Spectrum - '+index+'</label>');
     }
@@ -154,26 +153,31 @@ Use the plots above to determine good cutoffs.</p>
 </section>
 
 <input name='section' type='hidden' value='preprocess' />
-<input type='submit' value='Run' disabled />
+<input type='submit' id='preprocess_submit' value='Run' disabled />
 </form>
 <div class='results'></div>
 </details>
-
 <!--
-.#####
-#.....#....##
-......#...#..#
-.#####...#....#
-......#..######
-#.....#..#....#
-.#####...#....#
+.#####...
+#.....#..
+......#..
+.#####...
+......#..
+#.....#..
+.#####...
 -->
+
 <details>
-<summary><span class='heading'>Solve for <i>k</i> (small)</span></summary>
+<summary><span class='heading'>Solve for <i>k</i> </span></summary>
 <form method='POST'>
 <section>
 <div class='param_group'>
 <p>Hapke parameters</p>
+<label>
+  <select id='ddlGrain' name="key">
+  </select>
+  Choose the Input Grain
+</label>
 <label>
   <input name='b' type='number' step='any' value='0.1' />
   Coefficient b of Legendre polynomial.
@@ -196,101 +200,37 @@ Use the plots above to determine good cutoffs.</p>
   Grain size.
 </label>
 </div>
+<script>
+    $('#preprocess_submit').click(function(){
+      $( ".fileElement" ).each(function( index ) {
+        var elementName = $(this).attr('name');
+        var fileAdded = $(this).val().split('\\').pop();
+
+        switch(elementName){
+          case 'small_file':
+          elementName = 'sml';
+          if(!fileAdded)
+            fileAdded = 'BytWS63106i30e0.asc (Small - default)';
+          break;
+          case 'medium_file':
+          elementName = 'med';
+          if(!fileAdded)
+            fileAdded = 'BytWM106150i30e0.asc (Medium - default)';
+          break;
+          case 'large_file':
+          elementName = 'big';
+          if(!fileAdded)
+            fileAdded = 'BytWB150180i30e0.asc (Large - default)';
+          break;
+        }
+
+        if(fileAdded){          
+          $("#ddlGrain").append('<option value="'+ elementName +'">'+ fileAdded+'</option>');
+        }
+      });
+    });
+  </script>
 </section>
-
-<input name='key' type='hidden' value='sml' />
-<input name='section' type='hidden' value='solve_for_k' />
-<input type='submit' value='Run' disabled />
-</form>
-<div class='results'></div>
-</details>
-
-<!--
-.#####
-#.....#..#####
-......#..#....#
-.#####...#####
-......#..#....#
-#.....#..#....#
-.#####...#####
--->
-<details>
-<summary><span class='heading'>Solve for <i>k</i> (medium)</span></summary>
-<form method='POST'>
-<section>
-<div class='param_group'>
-<p>Hapke parameters</p>
-<label>
-  <input name='b' type='number' step='any' value='0.1' />
-  Coefficient b of Legendre polynomial.
-</label>
-<label>
-  <input name='c' type='number' step='any' value='0.3' />
-  Coefficient c of Legendre polynomial.
-</label>
-<label>
-  <input name='ff' type='number' step='any' value='0.46' />
-  Filling factor.
-</label>
-<label>
-  <input name='s' type='number' step='any' value='0' />
-  Internal scattering.
-</label>
-<label>
-  <!-- <input name='D' type='number' step='any' value='63' min='0' /> -->
-  <input name='D' type='number' step='any' value='106' min='0' />
-  Grain size.
-</label>
-</div>
-</section>
-
-<input name='key' type='hidden' value='med' />
-<input name='section' type='hidden' value='solve_for_k' />
-<input type='submit' value='Run' disabled />
-</form>
-<div class='results'></div>
-</details>
-
-<!--
-.#####
-#.....#...####
-......#..#....#
-.#####...#
-......#..#
-#.....#..#....#
-.#####....####
--->
-<details>
-<summary><span class='heading'>Solve for <i>k</i> (large)</span></summary>
-<form method='POST'>
-<section>
-<div class='param_group'>
-<p>Hapke parameter estimates.</p>
-<label>
-  <input name='b' type='number' step='any' value='-0.1' />
-  Coefficient b of Legendre polynomial.
-</label>
-<label>
-  <input name='c' type='number' step='any' value='0.3' />
-  Coefficient c of Legendre polynomial.
-</label>
-<label>
-  <input name='ff' type='number' step='any' value='0.46' />
-  Filling factor.
-</label>
-<label>
-  <input name='s' type='number' step='any' value='0' />
-  Internal scattering.
-</label>
-<label>
-  <!-- <input name='D' type='number' step='any' value='90' min='0' /> -->
-  <input name='D' type='number' step='any' value='150' min='0' />
-  Grain size.
-</label>
-</div>
-</section>
-
-<input name='key' type='hidden' value='big' />
 <input name='section' type='hidden' value='solve_for_k' />
 <input type='submit' value='Run' disabled />
 </form>
