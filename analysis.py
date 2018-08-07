@@ -2,6 +2,8 @@ from __future__ import division, print_function
 import numpy as np
 import scipy.io
 from matplotlib import pyplot as plt
+#Fix for Error in Section 3 - Solve For K in external Library Matplotlib
+plt.switch_backend('agg')
 from scipy.optimize import least_squares
 from scipy.integrate import trapz
 
@@ -42,7 +44,7 @@ def fit_left_side(wavelength, spec, UV, fit_order=0):
     spec = np.concatenate((padding + spec[0], spec))
   else:
     # define end of curve to fit
-    idx = len(leftw) + 1
+    idx = len(leftw) + 1 # Change 1 to optional user input
     fit_order = min(fit_order, len(leftw))
     # fit curves
     poly = np.poly1d(np.polyfit(wavelength[:idx], spec[:idx], fit_order))
@@ -128,7 +130,7 @@ def MasterHapke1_PP(hapke, traj, b, c, ff, s, D, debug_plots=False):
 
   return k
 
-
+#Find what is magic 12
 def MasterHapke2_PP(hapke, spectra, coefg, lb, ub, ff, spts=1, **kwargs):
   """This program performs an iterative minimization using Hapke's radiative
   transfer theory to find a global and grain-size independent value of
@@ -136,6 +138,7 @@ def MasterHapke2_PP(hapke, spectra, coefg, lb, ub, ff, spts=1, **kwargs):
   wave = spectra['med'][:,0]
   actuals = [spectra[key][:,1] for key in ('sml', 'med', 'big')]
 
+  #Why 3 
   def obj_fn(coef):
     k = coef[12:]
     loss = 0

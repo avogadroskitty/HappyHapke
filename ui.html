@@ -202,6 +202,8 @@ Use the plots above to determine good cutoffs.</p>
 </div>
 <script>
     $('#preprocess_submit').click(function(){
+      //To prevent adding the same file multipe files to the dropdown if we click preprocess submit multiple times
+      $("#ddlGrain option").remove();
       $( ".fileElement" ).each(function( index ) {
         var elementName = $(this).attr('name');
         var fileAdded = $(this).val().split('\\').pop();
@@ -224,6 +226,7 @@ Use the plots above to determine good cutoffs.</p>
           break;
         }
 
+        //Checks if the variable fileAdded is not an empty string
         if(fileAdded){          
           $("#ddlGrain").append('<option value="'+ elementName +'">'+ fileAdded+'</option>');
         }
