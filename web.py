@@ -55,7 +55,6 @@ class HapkeHandler(tornado.web.RequestHandler):
     state = self.application.prog_states[uid]
     param = self.get_argument('p')
     fname, mimetype, data = state._download_data(param)
-    print(data)
     self.set_header('Content-Type', mimetype)
     self.set_header('Content-Disposition', 'attachment; filename=' + fname)
     self.write(data)

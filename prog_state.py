@@ -56,6 +56,7 @@ class ProgramState(object):
     self.pp_spectra = {}
     self.ks = {}
     self.guesses = {}
+    self.scat_eff_grain = {}
 
     if self.hapke_scalar.needs_isow:
       # store the calibration spectrum
@@ -132,13 +133,13 @@ class ProgramState(object):
     traj = self.pp_spectra[key]
     plt.close('all')  # hack!
     #The hidden treasure where all the brains are hidden
-    self.ks[key] = analysis.MasterHapke1_PP(
+    solved_k, scat_eff = analysis.MasterHapke1_PP(
         self.hapke_scalar, traj, b, c, ff, s, D, debug_plots=True)
-    figures = [plt.figure(i) for i in plt.get_fignums()]
-    return 'Solved for k: ', 'k-' + key, figures
 
-  def get_loaded_samples(self):
-    return list(self.pp_spectra.keys())
+    self.ks[key] = solved_k
+    self.scat_eff_grain[key] = scat_eff
+    figures = [plt.figure(i) for i in plt.get_fignums()]
+    return 'Solved for k: ', 'sk-' + key, figures
 
   def optimize_global_k(self, guess_key='med', opt_strategy='fast',
                         lowb1=0, lowb2=0, lowb3=0, upb1=0, upb2=0, upb3=0,
@@ -350,6 +351,14 @@ class ProgramState(object):
           fname = '%s.txt' % names[key]
           zf.writestr(fname, _traj2bytes(self.pp_spectra[key]))
       return 'preprocessed.zip', 'application/zip', buf.getvalue()
+    elif param.startswith('sk-'):
+      key = param.split('-', 1)[1]
+      buf = BytesIO()
+      with ZipFile(buf, mode='w') as zf:
+        for s_data in self.scat_eff_grain[key]: 
+          file = '%s.txt' % s_data[0]
+          zf.writestr(file, _plot2bytes(s_data[1], s_data[2]))
+      return 'solved_k_data-%s.zip' % key, 'application/zip', buf.getvalue()
     elif param.startswith('k-'):
       key = param.split('-', 1)[1]
       fname = 'k_%s.txt' % names[key]
@@ -369,3 +378,6 @@ def _traj2bytes(traj):
 
 def _vec2bytes(arr):
   return b'\n'.join(b'%r' % x for x in arr)
+
+def _plot2bytes(x_data, y_data):
+  return b'\n'.join(b'%r\t%r' % (x,y) for x,y in zip(x_data, y_data))

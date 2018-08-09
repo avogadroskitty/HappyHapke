@@ -87,15 +87,16 @@ def MasterHapke1_PP(hapke, traj, b, c, ff, s, D, debug_plots=False):
     ScatAlb = hapke.scattering_efficiency(k, wavelength, D, s)
     rc3 = hapke.radiance_coeff(ScatAlb, b, c, ff)
 
+    #The _ is the figure and the axes object is stores in axes
     _, axes = plt.subplots(figsize=(10,4), nrows=2, ncols=2, sharex=True)
     # plot reflectance data and rc2 for comparison
-    ax = axes[0,0]
+    ax = axes[0,0] #Position of the plots
     ax.plot(wavelength, reflect)
-    ax.plot(wavelength, rc2, '--')
+    ax.plot(wavelength, rc2, '--')# Third argument is for dotted lines
     ax.set_ylabel('Reflectance (#)')
     ax.set_title('Fit #1: scattering')
-    ax2 = ax.twinx()
-    ax2.plot(wavelength, np.abs(rc2 - reflect), 'k-', lw=1, alpha=0.75)
+    ax2 = ax.twinx() # Makes another invisible copy of the X Axis -- that is shared from the previous plot
+    ax2.plot(wavelength, np.abs(rc2 - reflect), 'k-', lw=1, alpha=0.75) #arguements are x data, y data, black solid line, line width and opacity
     ax2.set_ylabel('Fit Error')
     ax2.ticklabel_format(axis='y', style='sci', scilimits=(-3,3))
 
@@ -124,11 +125,22 @@ def MasterHapke1_PP(hapke, traj, b, c, ff, s, D, debug_plots=False):
 
     # plot fitted k
     ax = axes[1,1]
-    ax.semilogy(wavelength, k)
+    ax.semilogy(wavelength, k) #Plot the graph in Log Scaling
     ax.set_ylabel('fitted k')
     ax.set_xlabel('Wavelength (um)')
 
-  return k
+    scat_eff_for_k = [ 
+                        ['Wavelength Vs Reflect',wavelength, reflect],
+                        ['Wavelength Vs Rc2', wavelength, rc2],
+                        ['Wavelength Vs Rc2-Reflect', wavelength, np.abs(rc2 - reflect)],
+                        ['Wavelength Vs W2', wavelength, w2], 
+                        ['Wavelength Vs Scat Alb', wavelength, ScatAlb],
+                        ['Wavelength Vs W2-ScatAlb', wavelength, np.abs(w2 - ScatAlb)],
+                        ['Wavelength Vs Rc3', wavelength, rc3],
+                        ['Wavelength Vs Rc3-Reflect', wavelength, np.abs(rc3 - reflect)],
+                        ['Wavelength Vs K', wavelength, k]
+                     ]
+  return k, scat_eff_for_k
 
 #Find what is magic 12
 def MasterHapke2_PP(hapke, spectra, coefg, lb, ub, ff, spts=1, **kwargs):

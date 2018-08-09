@@ -205,7 +205,7 @@ Use the plots above to determine good cutoffs.</p>
       //To prevent adding the same file multipe files to the dropdown if we click preprocess submit multiple times
       $("#ddlGrain option").remove();
       $( ".fileElement" ).each(function( index ) {
-        var elementName = $(this).attr('name');
+        var elementName = $(this).attr('name'); // Holds the fileId for the files added adhoc
         var fileAdded = $(this).val().split('\\').pop();
 
         switch(elementName){
