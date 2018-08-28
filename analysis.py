@@ -47,6 +47,8 @@ def fit_left_side(wavelength, spec, UV, fit_order=0):
     idx = len(leftw) + 1 # Change 1 to optional user input
     fit_order = min(fit_order, len(leftw))
     # fit curves
+    # Takes the wavelength, spectrum points as x,y and fits a polynomial on it. Degree is the fitorder variable 
+    # poly1d makes a one-d polynomial from the co-efficients returned by the polyfit method 
     poly = np.poly1d(np.polyfit(wavelength[:idx], spec[:idx], fit_order))
     spec = np.concatenate((poly(leftw), spec))
   wavelength = np.concatenate((leftw, wavelength))
@@ -129,6 +131,7 @@ def MasterHapke1_PP(hapke, traj, b, c, ff, s, D, debug_plots=False):
     ax.set_ylabel('fitted k')
     ax.set_xlabel('Wavelength (um)')
 
+    #A list for all the data that is plotted
     scat_eff_for_k = [ 
                         ['Wavelength Vs Reflect',wavelength, reflect],
                         ['Wavelength Vs Rc2', wavelength, rc2],
@@ -147,15 +150,18 @@ def MasterHapke2_PP(hapke, spectra, coefg, lb, ub, ff, spts=1, **kwargs):
   """This program performs an iterative minimization using Hapke's radiative
   transfer theory to find a global and grain-size independent value of
   imaginary index of refraction, k."""
+  no_of_grain_samples = len(spectra)
+  total_guesses = no_of_grain_samples * 4 # 4 values (b,c,s,D) for each grain size
+
   wave = spectra['med'][:,0]
-  actuals = [spectra[key][:,1] for key in ('sml', 'med', 'big')]
+  actuals = [spectra[key][:,1] for key in spectra.keys()]
 
   #Why 3 
   def obj_fn(coef):
-    k = coef[12:]
+    k = coef[total_guesses:]
     loss = 0
     for i, actual in enumerate(actuals):
-      b, c, s, D = coef[i:12:3]
+      b, c, s, D = coef[i:total_guesses:no_of_grain_samples]
       scat = hapke.scattering_efficiency(k, wave, D, s)
       rc = hapke.radiance_coeff(scat, b, c, ff[i])
       loss += ((rc - actual)**2).sum()
@@ -163,11 +169,16 @@ def MasterHapke2_PP(hapke, spectra, coefg, lb, ub, ff, spts=1, **kwargs):
 
   start_points = np.empty((spts, len(coefg)))
   start_points[0] = coefg
+
+  #Initialize random start points
   for i in range(1, spts):
     start_points[i] = np.random.uniform(lb, ub)
 
+  #Start Points is 215 + 4 * no of grain samples
+
   bounds = np.row_stack((lb, ub))
   solutions = []
+  #For each start point - minimize the least square error and append it to solutions.
   for spt in start_points:
     res = least_squares(obj_fn, spt, bounds=bounds, method='trf', **kwargs)
     solutions.append(res)

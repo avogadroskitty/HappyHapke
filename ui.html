@@ -235,7 +235,7 @@ Use the plots above to determine good cutoffs.</p>
   </script>
 </section>
 <input name='section' type='hidden' value='solve_for_k' />
-<input type='submit' value='Run' disabled />
+<input id='solve_for_k_by_grain_submit' type='submit' value='Run' disabled />
 </form>
 <div class='results'></div>
 </details>
@@ -253,13 +253,10 @@ Use the plots above to determine good cutoffs.</p>
 <summary><span class='heading'>Solve for <i>k</i> (global)</span></summary>
 <form method='POST'>
 <section>
-<div class='param_group'>
+<div>
 <p>Optimization Parameters</p>
 <label>
-  <select name='guess_key'>
-    <option value='sml'>Small grain</option>
-    <option value='med' selected>Medium grain</option>
-    <option value='big'>Large grain</option>
+  <select id='ddlGuessKey' name='guess_key'>
   </select>
   Previous section to take the initial guess for k from.
 </label>
@@ -287,66 +284,84 @@ Use the plots above to determine good cutoffs.</p>
 </label>
 </div>
 
-<div class='param_group'>
-<p>Bounds on Hapke parameters for small, medium, and large grain sizes.</p>
-<div>Coefficient b of Legendre polynomial:</div>
-<label>
-  <input name='lowb1' type='number' step='any' value='-1.7' />
-  <input name='lowb2' type='number' step='any' value='-1.7' />
-  <input name='lowb3' type='number' step='any' value='-1.7' />
-  Lower bounds.
-</label>
-<label>
-  <input name='upb1' type='number' step='any' value='1.7' />
-  <input name='upb2' type='number' step='any' value='1.7' />
-  <input name='upb3' type='number' step='any' value='1.7' />
-  Upper bounds.
-</label>
-<div>Coefficient c of Legendre polynomial:</div>
-<label>
-  <input name='lowc1' type='number' step='any' value='-1.0' />
-  <input name='lowc2' type='number' step='any' value='-1.0' />
-  <input name='lowc3' type='number' step='any' value='-1.0' />
-  Lower bounds.
-</label>
-<label>
-  <input name='upc1' type='number' step='any' value='1.0' />
-  <input name='upc2' type='number' step='any' value='1.0' />
-  <input name='upc3' type='number' step='any' value='1.0' />
-  Upper bounds.
-</label>
-<div>Internal scattering:</div>
-<label>
-  <input name='lows1' type='number' step='any' value='0' />
-  <input name='lows2' type='number' step='any' value='0' />
-  <input name='lows3' type='number' step='any' value='0' />
-  Lower bounds.
-</label>
-<label>
-  <input name='ups1' type='number' step='any' value='0.06' />
-  <input name='ups2' type='number' step='any' value='0.06' />
-  <input name='ups3' type='number' step='any' value='0.06' />
-  Upper bounds.
-</label>
-<div>Grain size:</div>
-<label>
-  <!-- <input name='lowD1' type='number' step='any' value='10' min='0' /> -->
-  <!-- <input name='lowD2' type='number' step='any' value='21' min='0' /> -->
-  <!-- <input name='lowD3' type='number' step='any' value='30' min='0' /> -->
-  <input name='lowD1' type='number' step='any' value='21' min='0' />
-  <input name='lowD2' type='number' step='any' value='35' min='0' />
-  <input name='lowD3' type='number' step='any' value='50' min='0' />
-  Lower bounds.
-</label>
-<label>
-  <!-- <input name='upD1' type='number' step='any' value='63' min='0' /> -->
-  <!-- <input name='upD2' type='number' step='any' value='90' min='0' /> -->
-  <!-- <input name='upD3' type='number' step='any' value='125' min='0' /> -->
-  <input name='upD1' type='number' step='any' value='106' min='0' />
-  <input name='upD2' type='number' step='any' value='150' min='0' />
-  <input name='upD3' type='number' step='any' value='180' min='0' />
-  Upper bounds.
-</label>
+<div>
+  <p class='param_group_head'>Bounds on Hapke parameters for various grain sizes.</p>  
+  <div id='bounds_group'>
+    
+  </div>
+
+   <script>
+
+      var optimized_grains = [];
+
+      //To add the bound fields dynamically based on the grain size files
+       $('#solve_for_k_by_grain_submit').click(function(){
+
+      //Add the file to the list of plotted grain sizes -- and add to the dropdown
+      var selectedOption_val = $('#ddlGrain').val();
+      var selectedOption_text = $('#ddlGrain :selected').text()
+
+      optimized_grains.push({ 'text' : selectedOption_text, 'value' : selectedOption_val});
+
+       $('#ddlGuessKey').empty();
+       optimized_grains.forEach(function(item){
+        $("#ddlGuessKey").append('<option value="'+ item.value +'">'+ item.text+'</option>');   
+       });
+       
+
+      //To prevent adding the same file multipe files to the dropdown if we click preprocess submit multiple times
+      $("#bounds_group").empty();
+      $( ".fileElement" ).each(function( index ) {
+        var elementName = $(this).attr('name'); // Holds the fileId for the files added adhoc
+        var fileAdded = $(this).val().split('\\').pop();
+
+        switch(elementName){
+          case 'small_file':
+          elementName = 'sml';
+          if(!fileAdded)
+            fileAdded = 'BytWS63106i30e0.asc (Small - default)';
+          break;
+          case 'medium_file':
+          elementName = 'med';
+          if(!fileAdded)
+            fileAdded = 'BytWM106150i30e0.asc (Medium - default)';
+          break;
+          case 'large_file':
+          elementName = 'big';
+          if(!fileAdded)
+            fileAdded = 'BytWB150180i30e0.asc (Large - default)';
+          break;
+        }
+
+        //Checks if the variable fileAdded is not an empty string
+        if(fileAdded){          
+          $("#bounds_group").append('<div><p class="param_grain_head" id="head_'+index+'"></p>'+
+                                      '<div>'+
+                                        '<p>Coefficient b of Legendre polynomial:</p>'+
+                                        '<label>Lower Bounds: <input name="lowb_'+elementName+'"" type="number" step="any" value="-1.7" /></label>'+
+                                        '<label>Upper Bounds:<input name="upb_'+elementName+'"" type="number" step="any" value="-1.7" /></label>'+
+                                      '</div>'+
+                                      '<div>'+
+                                        '<p>Coefficient c of Legendre polynomial:</p>'+
+                                        '<label>Lower Bounds: <input name="lowc_'+elementName+'"" type="number" step="any" value="-1.0" /></label>'+
+                                        '<label>Upper Bounds:<input name="upc_'+elementName+'"" type="number" step="any" value="1.0" /></label>'+
+                                      '</div>'+
+                                      '<div>'+
+                                        '<p>Internal Scattering:</p>'+
+                                        '<label>Lower Bounds: <input name="lows_'+elementName+'"" type="number" step="any" value="0" /></label>'+
+                                        '<label>Upper Bounds:<input name="ups_'+elementName+'"" type="number" step="any" value="0.06" /></label>'+
+                                      '</div>'+
+                                      '<div>'+
+                                        '<p>Grain Size:</p>'+
+                                        '<label>Lower Bounds: <input name="lowD_'+elementName+'"" type="number" step="any" value="-1.7" /></label>'+
+                                        '<label>Upper Bounds:<input name="upD_'+elementName+'"" type="number" step="any" value="-1.7" /></label>'+
+                                      '</div>'+
+                                    '</div>');
+          $('#head_'+index).text(fileAdded);
+        }
+      });
+    });
+  </script>
 </div>
 </section>
 

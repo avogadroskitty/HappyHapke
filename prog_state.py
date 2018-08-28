@@ -49,6 +49,7 @@ class ProgramState(object):
                         ('file6', file6),
                         ('file7', file7)]:
       #Checks if the infile variable has a string -- sanity check if not all ten files are uploaded
+      #self.spectra has the number of grain files included in the process
       if not infile == '':
         self.spectra[key] = analysis.loadmat_single(infile)
 
@@ -141,12 +142,17 @@ class ProgramState(object):
     figures = [plt.figure(i) for i in plt.get_fignums()]
     return 'Solved for k: ', 'sk-' + key, figures
 
-  def optimize_global_k(self, guess_key='med', opt_strategy='fast',
-                        lowb1=0, lowb2=0, lowb3=0, upb1=0, upb2=0, upb3=0,
-                        lowc1=0, lowc2=0, lowc3=0, upc1=0, upc2=0, upc3=0,
-                        lows1=0, lows2=0, lows3=0, ups1=0, ups2=0, ups3=0,
-                        lowD1=0, lowD2=0, lowD3=0, upD1=0, upD2=0, upD3=0,
-                        lowk=0, upk=0, num_solns=1):
+  def optimize_global_k(self, guess_key='sml', opt_strategy='fast', num_solns=1,lowk=0, upk=0,
+                        lowb_sml=0, lowb_med=0, lowb_big=0, upb_sml=0, upb_med=0, upb_big=0,
+                        lowc_sml=0, lowc_med=0, lowc_big=0, upc_sml=0, upc_med=0, upc_big=0,
+                        lows_sml=0, lows_med=0, lows_big=0, ups_sml=0, ups_med=0, ups_big=0,
+                        lowD_sml=0, lowD_med=0, lowD_big=0, upD_sml=0, upD_med=0, upD_big=0,
+                        **kwargs):
+    #The previous step only approximates for a single grain size
+    #Should we have guesses for all grain samples or only the ones we have approximated for?
+    no_of_grain_samples = len(self.spectra)
+    total_guesses = no_of_grain_samples * 4 # 4 values (b,c,s,D) for each grain size
+
     self.hapke_vector_isow = self.hapke_scalar.copy()
     if self.hapke_vector_isow.needs_isow:
       # use vector isow, instead of the scalar we had before
@@ -156,55 +162,73 @@ class ProgramState(object):
 
     # set up initial guesses
     k = self.ks[guess_key]
-    guesses = np.empty(len(k) + 12)
-    ff = np.zeros(3)
-    for i, key in enumerate(('sml', 'med', 'big')):
+    # [215,] -- size of the array
+    guesses = np.empty(len(k) + total_guesses)
+    #[215 + (4 * no of grains),] - size of the guesses list
+    ff = np.zeros(no_of_grain_samples)
+    for i, key in enumerate(self.guesses.keys()):
+      print("i, key", i, key)
       g = self.guesses[key]
-      guesses[i:12:3] = g[:4]
+      # Unpacks the b,c,s,D values for each grain size into one large array. g holds b,c,s,D,f -- we take only the first four
+      guesses[i:total_guesses:no_of_grain_samples] = g[:4] 
+      # guesses Example:
+      # for sml, med anf big grain sizes
+      # [sml-b, med-b, big-g, sml-C, med-C, big-C, sml-S, med-S, big-S, sml-D, med-D, big-D, 215 values of K]
+      # total with the length of K - 4 values for each grain size -- this is the magic 12
       ff[i] = g[4]
-    guesses[12:] = k
+    guesses[total_guesses:] = k #Filling the rest of the array with the value of K
 
     # set up bounds
     lb = np.empty_like(guesses)
-    lb[:12] = [lowb1, lowb2, lowb3, lowc1, lowc2, lowc3, lows1, lows2, lows3,
-               lowD1, lowD2, lowD3]
-    lb[12:] = lowk
+    #Values that will be there regardless if additional grain sizes are uploaded
+    lb[:12] = [lowb_sml, lowb_med, lowb_big, lowc_sml, lowc_med, lowc_big, lows_sml, lows_med, lows_big,
+    lowD_sml, lowD_med, lowD_big]
+
+    temp_low_bound = []
+    for grain in self.spectra.keys():
+      if grain not in ['sml', 'med', 'big']:
+        temp_low_bound.append(kwargs['lowb_'+grain])
+        temp_low_bound.append(kwargs['lowc_'+grain])
+        temp_low_bound.append(kwargs['lows_'+grain])
+        temp_low_bound.append(kwargs['lowD_'+grain])
+
+    lb[12:total_guesses] = temp_low_bound
+    #Filling in rest of the values
+    lb[total_guesses:] = lowk
+
     ub = np.empty_like(guesses)
-    ub[:12] = [upb1, upb2, upb3, upc1, upc2, upc3, ups1, ups2, ups3,
-               upD1, upD2, upD3]
+    ub[:12] = [upb_sml, upb_med, upb_big, upc_sml, upc_med, upc_big, ups_sml, ups_med, ups_big,
+    upD_sml, upD_med, upD_big]
     ub[12:] = upk
     self.bounds = (lb, ub)
 
     # solve
-    if opt_strategy == 'fast':
-      solns = analysis.optimize_global_k(
-          self.hapke_vector_isow, self.pp_spectra, guesses, lb, ub, ff,
-          num_iters=int(num_solns))
-      best_soln = solns[-1]
-    else:
-      tmp = analysis.MasterHapke2_PP(
-          self.hapke_vector_isow, self.pp_spectra, guesses, lb, ub, ff,
-          tr_solver='lsmr', verbose=2, spts=int(num_solns))
-      solns = [res.x for res in tmp]
-      best_soln = min(tmp, key=lambda res: res.cost).x
+    tmp = analysis.MasterHapke2_PP(
+        self.hapke_vector_isow, self.pp_spectra, guesses, lb, ub, ff,
+        tr_solver='lsmr', verbose=2, spts=int(num_solns))
+    solns = [res.x for res in tmp]
+    best_soln = min(tmp, key=lambda res: res.cost).x
 
     # save the best solution
-    self.ks['global'] = best_soln[12:]
-    for i, key in enumerate(('sml', 'med', 'big')):
-      b, c, s, D = best_soln[i:12:3]
+    self.ks['global'] = best_soln[total_guesses:]
+    for i, key in enumerate(self.spectra.keys):
+      b, c, s, D = best_soln[i:total_guesses:no_of_grain_samples]
       self.guesses[key] = (b, c, s, D, ff[i])
 
     # plot solved parameters (b, c, s, D) for each grain size
-    fig1, axes = plt.subplots(figsize=(9,5), ncols=4, nrows=3, sharex=True,
+    fig1, axes = plt.subplots(figsize=(9,5), ncols=4, nrows=no_of_grain_samples, sharex=True,
                               frameon=False)
-    axes[0,0].set_ylabel('Small')
-    axes[1,0].set_ylabel('Medium')
-    axes[2,0].set_ylabel('Large')
+
+    #Label the rows
+    for i, key in self.spectra.keys:
+      axes[i,0].set_ylabel(key)
+    
+    #Label the columns
     axes[0,0].set_title('b')
     axes[0,1].set_title('c')
     axes[0,2].set_title('s')
     axes[0,3].set_title('D')
-    for i, key in enumerate(('sml', 'med', 'big')):
+    for i, key in enumerate(self.spectra.keys):
       for j in range(4):
         ax = axes[i,j]
         idx = i + j*3
@@ -222,10 +246,10 @@ class ProgramState(object):
                                     frameon=False)
     best_soln = solns[-1]
     line_colors = ['b', 'g', 'r']  # ['C0', 'C1', 'C3']
-    for i, key in enumerate(('sml', 'med', 'big')):
+    for i, key in enumerate(self.spectra.keys):
       wave, orig = self.pp_spectra[key].T
-      b, c, s, D = best_soln[i:12:3]
-      scat = self.hapke_vector_isow.scattering_efficiency(best_soln[12:], wave,
+      b, c, s, D = best_soln[i:total_guesses:no_of_grain_samples]
+      scat = self.hapke_vector_isow.scattering_efficiency(best_soln[total_guesses:], wave,
                                                           D, s)
       rc = self.hapke_vector_isow.radiance_coeff(scat, b, c, ff[i])
 
@@ -245,9 +269,9 @@ class ProgramState(object):
 
     # plot original ks vs global k
     fig3, ax = plt.subplots(figsize=(6, 4), frameon=False)
-    ax.plot(wave, self.ks['sml'], label='Small')
-    ax.plot(wave, self.ks['med'], label='Medium')
-    ax.plot(wave, self.ks['big'], label='Large')
+    for key in self.spectra.keys:
+      ax.plot(wave, self.ks[key], label=key)
+
     ax.plot(wave, self.ks['global'], 'k--', label='Global')
     ax.set_xlabel('Wavelength (um)')
     ax.set_title('Fitted k')
