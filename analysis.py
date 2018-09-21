@@ -177,6 +177,7 @@ def MasterHapke2_PP(hapke, spectra, coefg, lb, ub, ff, spts=1, **kwargs):
   #Start Points is 215 + 4 * no of grain samples
 
   bounds = np.row_stack((lb, ub))
+
   solutions = []
   #For each start point - minimize the least square error and append it to solutions.
   for spt in start_points:
