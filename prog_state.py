@@ -167,7 +167,6 @@ class ProgramState(object):
     #[215 + (4 * no of grains),] - size of the guesses list
     ff = np.zeros(no_of_grain_samples)
     for i, key in enumerate(self.guesses.keys()):
-      print("i, key", i, key)
       g = self.guesses[key]
       # Unpacks the b,c,s,D values for each grain size into one large array. g holds b,c,s,D,f -- we take only the first four
       guesses[i:total_guesses:no_of_grain_samples] = g[:4] 
@@ -185,6 +184,9 @@ class ProgramState(object):
     lowD_sml, lowD_med, lowD_big]
 
     temp_low_bound = []
+
+    print("-*100")
+    print(self.spectra)
     for grain in self.spectra.keys():
       if grain not in ['sml', 'med', 'big']:
         temp_low_bound.append(kwargs['lowb_'+grain])
