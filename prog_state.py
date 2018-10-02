@@ -176,7 +176,7 @@ class ProgramState(object):
       # total with the length of K - 4 values for each grain size -- this is the magic 12
       ff[i] = g[4]
     guesses[total_guesses:] = k #Filling the rest of the array with the value of K
-
+    print(self.ks)
     # set up bounds
     lb = np.empty_like(guesses)
     #Values that will be there regardless if additional grain sizes are uploaded
@@ -185,8 +185,6 @@ class ProgramState(object):
 
     temp_low_bound = []
 
-    print("-*100")
-    print(self.spectra)
     for grain in self.spectra.keys():
       if grain not in ['sml', 'med', 'big']:
         temp_low_bound.append(kwargs['lowb_'+grain])
