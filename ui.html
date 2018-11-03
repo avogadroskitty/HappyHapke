@@ -187,7 +187,7 @@ Use the plots above to determine good cutoffs.</p>
   Coefficient c of Legendre polynomial.
 </label>
 <label>
-  <input name='ff' type='number' step='any' value='0.0000000001' />
+  <input name='ff' type='number' step='any' value='0.46' />
   Filling factor.
 </label>
 <label>
@@ -205,21 +205,37 @@ Use the plots above to determine good cutoffs.</p>
       //To prevent adding the same file multipe files to the dropdown if we click preprocess submit multiple times
       $("#ddlGrain option").remove();
       $( ".fileElement" ).each(function( index ) {
+        
         var elementName = $(this).attr('name'); // Holds the fileId for the files added adhoc
         var fileAdded = $(this).val().split('\\').pop();
 
         switch(elementName){
           case 'small_file':
+          b = 0.1;
+          c = 0.3;
+          s = 0.46;
+          ff = 0
+          D = 63;
           elementName = 'sml';
           if(!fileAdded)
             fileAdded = 'BytWS63106i30e0.asc (Small - default)';
           break;
           case 'medium_file':
+          b = 0.1;
+          c = 0.3;
+          s = 0.46;
+          ff = 0
+          D = 106;
           elementName = 'med';
           if(!fileAdded)
             fileAdded = 'BytWM106150i30e0.asc (Medium - default)';
           break;
           case 'large_file':
+          b = -0.1;
+          c = 0.3;
+          s = 0.46;
+          ff = 0
+          D = 150;
           elementName = 'big';
           if(!fileAdded)
             fileAdded = 'BytWB150180i30e0.asc (Large - default)';
@@ -231,6 +247,49 @@ Use the plots above to determine good cutoffs.</p>
           $("#ddlGrain").append('<option value="'+ elementName +'">'+ fileAdded+'</option>');
         }
       });
+    });
+
+    //On dropdown change
+    $('#ddlGrain').change(function(){
+        var b = 0;
+        var c = 0;
+        var ff = 0;
+        var s = 0;
+        var D = 0;
+        var elementName = $(this).val(); // Holds the fileId for the files added adhoc
+        console.log(elementName);
+        switch(elementName){
+          case 'sml':
+          b = 0.1;
+          c = 0.3;
+          ff = 0.46;
+          s = 0;
+          D = 63;
+          break;
+          case 'med':
+          b = 0.1;
+          c = 0.3;
+          ff = 0.46;
+          s = 0;
+          D = 106;
+          break;
+          case 'big':
+          b = -0.1;
+          c = 0.3;
+          ff = 0.46;
+          s = 0;
+          D = 150;
+          break;
+        }
+
+
+        //Sets the values for the input
+        $('input[name="b"]').val(b);
+        $('input[name="c"]').val(c);
+        $('input[name="s"]').val(s);
+        $('input[name="ff"]').val(ff);
+        $('input[name="D"]').val(D);
+
     });
   </script>
 </section>
@@ -268,7 +327,6 @@ Use the plots above to determine good cutoffs.</p>
 <br>
 <label>
   <select name='opt_strategy' onchange='$(".opt_strat_desc").toggle()'>
-    <option value='fast' selected>Alternating minimization</option>
     <option value='slow'>Single minimization (slow)</option>
   </select>
   Optimization strategy.
@@ -304,7 +362,7 @@ Use the plots above to determine good cutoffs.</p>
       optimized_grains.push({ 'text' : selectedOption_text, 'value' : selectedOption_val});
 
        $('#ddlGuessKey').empty();
-       optimized_grains.forEach(function(item){
+       $.unique(optimized_grains).forEach(function(item){
         $("#ddlGuessKey").append('<option value="'+ item.value +'">'+ item.text+'</option>');   
        });
        
@@ -312,21 +370,29 @@ Use the plots above to determine good cutoffs.</p>
       //To prevent adding the same file multipe files to the dropdown if we click preprocess submit multiple times
       $("#bounds_group").empty();
       $( ".fileElement" ).each(function( index ) {
+        var grain_lb = 0;
+        var grain_ub = 0;
         var elementName = $(this).attr('name'); // Holds the fileId for the files added adhoc
         var fileAdded = $(this).val().split('\\').pop();
 
         switch(elementName){
           case 'small_file':
           elementName = 'sml';
+          grain_lb = 21;
+          grain_ub = 106;
           if(!fileAdded)
             fileAdded = 'BytWS63106i30e0.asc (Small - default)';
           break;
           case 'medium_file':
+          grain_lb = 35;
+          grain_ub = 150;
           elementName = 'med';
           if(!fileAdded)
             fileAdded = 'BytWM106150i30e0.asc (Medium - default)';
           break;
           case 'large_file':
+          grain_lb = 50;
+          grain_ub = 180;
           elementName = 'big';
           if(!fileAdded)
             fileAdded = 'BytWB150180i30e0.asc (Large - default)';
@@ -339,7 +405,7 @@ Use the plots above to determine good cutoffs.</p>
                                       '<div>'+
                                         '<p>Coefficient b of Legendre polynomial:</p>'+
                                         '<label>Lower Bounds: <input name="lowb_'+elementName+'"" type="number" step="any" value="-1.7" /></label>'+
-                                        '<label>Upper Bounds:<input name="upb_'+elementName+'"" type="number" step="any" value="-1.7" /></label>'+
+                                        '<label>Upper Bounds:<input name="upb_'+elementName+'"" type="number" step="any" value="1.7" /></label>'+
                                       '</div>'+
                                       '<div>'+
                                         '<p>Coefficient c of Legendre polynomial:</p>'+
@@ -353,8 +419,8 @@ Use the plots above to determine good cutoffs.</p>
                                       '</div>'+
                                       '<div>'+
                                         '<p>Grain Size:</p>'+
-                                        '<label>Lower Bounds: <input name="lowD_'+elementName+'"" type="number" step="any" value="-1.7" /></label>'+
-                                        '<label>Upper Bounds:<input name="upD_'+elementName+'"" type="number" step="any" value="-1.7" /></label>'+
+                                        '<label>Lower Bounds: <input name="lowD_'+elementName+'"" type="number" step="any" value="'+grain_lb+'" /></label>'+
+                                        '<label>Upper Bounds:<input name="upD_'+elementName+'"" type="number" step="any" value="'+grain_ub+'" /></label>'+
                                       '</div>'+
                                     '</div>');
           $('#head_'+index).text(fileAdded);

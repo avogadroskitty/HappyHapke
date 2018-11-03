@@ -139,6 +139,9 @@ class ProgramState(object):
 
     self.ks[key] = solved_k
     self.scat_eff_grain[key] = scat_eff
+    print("--"*50)
+    print(plt.get_fignums())
+    print("--"*50)
     figures = [plt.figure(i) for i in plt.get_fignums()]
     return 'Solved for k: ', 'sk-' + key, figures
 
@@ -161,6 +164,7 @@ class ProgramState(object):
       self.hapke_vector_isow.set_isow(self.calspec[idx1:idx2,1])
 
     # set up initial guesses
+    print(self.ks)
     k = self.ks[guess_key]
     # [215,] -- size of the array
     guesses = np.empty(len(k) + total_guesses)
@@ -176,7 +180,6 @@ class ProgramState(object):
       # total with the length of K - 4 values for each grain size -- this is the magic 12
       ff[i] = g[4]
     guesses[total_guesses:] = k #Filling the rest of the array with the value of K
-    print(self.ks)
     # set up bounds
     lb = np.empty_like(guesses)
     #Values that will be there regardless if additional grain sizes are uploaded
@@ -211,7 +214,7 @@ class ProgramState(object):
 
     # save the best solution
     self.ks['global'] = best_soln[total_guesses:]
-    for i, key in enumerate(self.spectra.keys):
+    for i, key in enumerate(self.spectra.keys()):
       b, c, s, D = best_soln[i:total_guesses:no_of_grain_samples]
       self.guesses[key] = (b, c, s, D, ff[i])
 
@@ -220,7 +223,7 @@ class ProgramState(object):
                               frameon=False)
 
     #Label the rows
-    for i, key in self.spectra.keys:
+    for i, key in enumerate(self.spectra.keys()):
       axes[i,0].set_ylabel(key)
     
     #Label the columns
@@ -228,7 +231,7 @@ class ProgramState(object):
     axes[0,1].set_title('c')
     axes[0,2].set_title('s')
     axes[0,3].set_title('D')
-    for i, key in enumerate(self.spectra.keys):
+    for i, key in enumerate(self.spectra.keys()):
       for j in range(4):
         ax = axes[i,j]
         idx = i + j*3
@@ -246,7 +249,7 @@ class ProgramState(object):
                                     frameon=False)
     best_soln = solns[-1]
     line_colors = ['b', 'g', 'r']  # ['C0', 'C1', 'C3']
-    for i, key in enumerate(self.spectra.keys):
+    for i, key in enumerate(self.spectra.keys()):
       wave, orig = self.pp_spectra[key].T
       b, c, s, D = best_soln[i:total_guesses:no_of_grain_samples]
       scat = self.hapke_vector_isow.scattering_efficiency(best_soln[total_guesses:], wave,
@@ -269,7 +272,7 @@ class ProgramState(object):
 
     # plot original ks vs global k
     fig3, ax = plt.subplots(figsize=(6, 4), frameon=False)
-    for key in self.spectra.keys:
+    for key in self.spectra.keys():
       ax.plot(wave, self.ks[key], label=key)
 
     ax.plot(wave, self.ks['global'], 'k--', label='Global')
