@@ -46,8 +46,8 @@ def parse_args():
     Usable range of wavelengths (in microns) - if you have bad data in the file,
     it will make the slope and intercept calculations wonky.
     LOW MUST BE AT LEAST ONE POINT IN FROM END OF DATA""")
-  g.add_argument('--low', default=0.405, help='Lower bound.')
-  g.add_argument('--high', default=2.451, help='Upper bound.')
+  g.add_argument('--low', default=0.32, help='Lower bound.')
+  g.add_argument('--high', default=2.55, help='Upper bound.')
 
   g = ap.add_argument_group('Known Variables')
   g.add_argument('--incident-angle', dest='thetai', default=-30,
@@ -80,9 +80,9 @@ def parse_args():
   g.add_argument('--grain-size', dest='D', nargs=3, type=float,
                  default=[45, 63, 90], help='Grain size guesses.')
   g.add_argument('--grain-size-lower', dest='lowD', nargs=3, type=float,
-                 default=[10, 21, 30], help='Grain size lower bounds.')
+                 default=[21, 30, 50], help='Grain size lower bounds.')
   g.add_argument('--grain-size-upper', dest='upD', nargs=3, type=float,
-                 default=[63, 90, 125], help='Grain size lower bounds.')
+                 default=[106, 150, 180], help='Grain size lower bounds.')
 
   g.add_argument('--internal-scattering', dest='s', nargs=3, type=float,
                  default=[0, 0, 0], help='Internal scattering param guesses.')
@@ -93,7 +93,7 @@ def parse_args():
                  help='Internal scattering upper bounds.')
 
   g.add_argument('--legendre-b', dest='b', nargs=3, type=float,
-                 default=[0.1, 0.1, -0.1],
+                 default=[0.1, 0.1, 0.1],
                  help='Guesses for Legendre polynomial coefficient b.')
   g.add_argument('--legendre-b-lower', dest='lowb', nargs=3, type=float,
                  default=[-1.7, -1.7, -1.7],
@@ -109,11 +109,11 @@ def parse_args():
                  default=[-1, -1, -1],
                  help='Lower bounds for Legendre polynomial coefficient c.')
   g.add_argument('--legendre-c-upper', dest='upc', nargs=3, type=float,
-                 default=[2, 2, 2],
+                 default=[1, 1, 1],
                  help='Upper bounds for Legendre polynomial coefficient c.')
 
   g.add_argument('--filling-factor', dest='ff', nargs=3, type=float,
-                 default=[0.46, 0.46, 0.46],
+                 default=[0.00000000001, 0.00000000001, 0.00000000001],
                  help="""Filling factor guesses. If you cannot define it,
                          set it to 1e-17 but according to Hapke 2008,
                          absence of a good estimate this term can result in
