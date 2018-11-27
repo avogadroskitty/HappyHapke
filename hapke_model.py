@@ -68,7 +68,9 @@ class _BaseHapke(object):
     tmp = np.sqrt(Alpha/(Alpha_s))
     ri = (1-tmp) / (1+tmp)
     tmp = np.exp(-D * np.sqrt(Alpha*Alpha_s))
+    #Hapke1993 equation 11.15a
     THETA = (ri + tmp) / (1 + ri*tmp)
+    #Hapke1993 equation 11.14 for w aka single scattering albedo
     return self.Se + (1-self.Se)*(((1-self.Si)*THETA)/(1 - self.Si*THETA))
 
   def _r0(self, scat_eff):
@@ -78,7 +80,12 @@ class _BaseHapke(object):
   def _Hu(self, scat_eff, u, r0=None):
     if r0 is None:
       r0 = self._r0(scat_eff)
-    return 1/(1 - u*scat_eff*(r0+np.log((1+u)/u)*(0.5 - r0*u)))
+      #Hapke 1993 equation 8.57
+      #H(x) = {1/{1-[1-gamma]*x*[r0+(1-0.5*r0-r0*x)*ln((1+x)/x)]}}
+      #Cj had return 1/(1 - u*scat_eff*(r0+np.log((1+u)/u)*(0.5 - r0*u)))
+      #this is not the same!
+    tmp_gamma = np.sqrt(1 - scat_eff)
+    return 1/(1-(1-tmp_gamma)*u*(r0 + (1 - 0.5*r0 - u*r0)*np.log((1 + u)/u)))
 
   def _Hu_Hu0(self, scat_eff, u, u0):
     r0 = self._r0(scat_eff)
@@ -115,6 +122,7 @@ class LambertianMixin(object):
     Pg = self.single_particle_phase(b, c)
     Hu, Hu0 = self._Hu_Hu0(scat_eff, self.u, self.u0)
     tmp = Pg * self.Bg1 + Hu*Hu0 - 1
+     #Hapke1993 equation 10.4
     return tmp * (scat_eff/4.) / (self.u + self.u0)
 
 

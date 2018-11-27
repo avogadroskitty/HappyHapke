@@ -153,8 +153,8 @@ def MasterHapke2_PP(hapke, spectra, coefg, lb, ub, ff, spts=1, **kwargs):
   no_of_grain_samples = len(spectra)
   total_guesses = no_of_grain_samples * 4 # 4 values (b,c,s,D) for each grain size
 
-  wave = spectra['med'][:,0]
-  actuals = [spectra[key][:,1] for key in spectra.keys()]
+  wave = spectra['file2'][:,0]
+  actuals = [spectra[key][:,1] for key in sorted(spectra.keys())]
 
   #Why 3 
   def obj_fn(coef):
@@ -162,6 +162,7 @@ def MasterHapke2_PP(hapke, spectra, coefg, lb, ub, ff, spts=1, **kwargs):
     loss = 0
     for i, actual in enumerate(actuals):
       b, c, s, D = coef[i:total_guesses:no_of_grain_samples]
+       #these are paired correctly now that it is sorted elsewheres
       scat = hapke.scattering_efficiency(k, wave, D, s)
       rc = hapke.radiance_coeff(scat, b, c, ff[i])
       loss += ((rc - actual)**2).sum()
@@ -181,15 +182,16 @@ def MasterHapke2_PP(hapke, spectra, coefg, lb, ub, ff, spts=1, **kwargs):
   solutions = []
   #For each start point - minimize the least square error and append it to solutions.
   for spt in start_points:
-    res = least_squares(obj_fn, spt, bounds=bounds, method='trf', **kwargs)
+    res = least_squares(obj_fn, spt, bounds=bounds, ftol=1.0e-16, xtol=2.23e-16,x_scale = 'jac', method='trf', max_nfev=15000, **kwargs)
+    #res = least_squares(obj_fn, spt, bounds=bounds, method='trf', **kwargs)
     solutions.append(res)
   return solutions
 
 
 def optimize_global_k(hapke, spectra, coefg, lb, ub, ff, num_iters=5):
   '''Similar to MasterHapke2_PP, but uses a different approach.'''
-  wave = spectra['med'][:,0]
-  actuals = [spectra[key][:,1] for key in ('sml', 'med', 'big')]
+  wave = spectra['file2'][:,0]
+  actuals = [spectra[key][:,1] for key in ('file1', 'file2', 'file3')]
   bounds = np.row_stack((lb, ub))
 
   soln = coefg.copy()

@@ -126,13 +126,13 @@ def main():
   MODEL.set_isow(calspec[isoind1:isoind2].mean())
 
   # load spectrum data
-  SPECTRA['sml'] = analysis.loadmat_single('../data/kjs.mat')
-  SPECTRA['med'] = analysis.loadmat_single('../data/kjm.mat')
-  SPECTRA['big'] = analysis.loadmat_single('../data/kjb.mat')
+  SPECTRA['file1'] = analysis.loadmat_single('../data/kjs.mat')
+  SPECTRA['file2'] = analysis.loadmat_single('../data/kjm.mat')
+  SPECTRA['file3'] = analysis.loadmat_single('../data/kjb.mat')
   for k in SPECTRA.keys():
     SPECTRA[k] = analysis.preprocess_traj(SPECTRA[k], 0.405, 2.451, 0.301)
 
-  K['med'] = analysis.MasterHapke1_PP(MODEL, SPECTRA['med'], .1, .3, .46, 0, 63)
+  K['file2'] = analysis.MasterHapke1_PP(MODEL, SPECTRA['file2'], .1, .3, .46, 0, 63)
 
   app = MplWebApp([(r'/', DemoHandler)], debug=True)
   app.listen(args.port)
@@ -161,8 +161,8 @@ class DemoHandler(tornado.web.RequestHandler):
     D = float(self.get_argument('D'))
     ff = float(self.get_argument('ff'))
 
-    wave = SPECTRA['med'][:,0]
-    k = K['med']
+    wave = SPECTRA['file2'][:,0]
+    k = K['file2']
 
     scat = MODEL.scattering_efficiency(k, wave, D, s)
     rc = MODEL.radiance_coeff(scat, b, c, ff)
