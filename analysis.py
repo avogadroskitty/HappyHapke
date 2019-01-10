@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 plt.switch_backend('agg')
 from scipy.optimize import least_squares
 from scipy.integrate import trapz
-
+from scipy.interpolate import PchipInterpolator
 
 def loadmat_single(path_or_file_obj):
   """Loads one array from a MAT-file or ascii file."""
@@ -182,177 +182,372 @@ def MasterHapke2_PP(hapke, spectra, coefg, lb, ub, ff, spts=1, **kwargs):
   solutions = []
   #For each start point - minimize the least square error and append it to solutions.
   for spt in start_points:
-    res = least_squares(obj_fn, spt, bounds=bounds, ftol=1.0e-16, xtol=2.23e-16,x_scale = 'jac', method='trf', max_nfev=15000, **kwargs)
+    res = least_squares(obj_fn, spt, bounds=bounds, ftol=1.0e-16, xtol=2.23e-16,x_scale = 'jac', method='trf', max_nfev=1, **kwargs)
     #res = least_squares(obj_fn, spt, bounds=bounds, method='trf', **kwargs)
     solutions.append(res)
   return solutions
 
+##Used in Section Addd MIR Data
+def MasterKcombine(mir_k, mir_v, wavelength, global_k, adjType):
+    k = loadmat_single(mir_k).ravel()
+    v = loadmat_single(mir_v).ravel()
+    
+    #as iof MaskerKcombine_Bas.mat -- we need to plot the k and v
+    _, axes = plt.subplots(figsize=(12,6), nrows=2, ncols=2)
+    ax1 = axes[0,0]
+    ax1.semilogy(v,k)
+    ax1.set_ylabel('k')
+    ax1.set_xlabel('Wavenumber (cm-1)')
+    ax1.set_title('MIR k')
+    ax1.invert_xaxis()
 
-def optimize_global_k(hapke, spectra, coefg, lb, ub, ff, num_iters=5):
-  '''Similar to MasterHapke2_PP, but uses a different approach.'''
-  wave = spectra['file2'][:,0]
-  actuals = [spectra[key][:,1] for key in ('file1', 'file2', 'file3')]
-  bounds = np.row_stack((lb, ub))
+    lam = wavelength
+    vnirk = global_k
 
-  soln = coefg.copy()
-  solutions = []
-  for _ in range(num_iters):
-    # step 1: optimize hapke parameters, holding k constant
-    for i, actual in enumerate(actuals):
-      idx = slice(i, 12, 3)
-      res = _optimize_bcsD(hapke, wave, actual, soln[idx], bounds[:,idx],
-                           ff[i], soln[12:])
-      soln[idx] = res.x
+    #Plot vnirk vs wavelength
+    ax2 = axes[0,1]
+    ax2.semilogy(lam, vnirk)
+    ax2.set_ylabel('k')
+    ax2.set_xlabel('Wavelength(um)')
+    ax2.set_title('VNIR k')
 
-    # step 2: optimize k, holding parameters constant
-    res = _optimize_k(hapke, wave, actuals, soln[12:], bounds[:,12:],
-                      soln[:12], ff)
-    soln[12:] = res.x
-    solutions.append(soln.copy())
+    # a little modeling magic to make the arrays meet
+    # in case you cut off some noise at the end
 
-  return solutions
-
-
-def _optimize_bcsD(hapke, wave, actual, guess, bounds, ff, k):
-  def obj_fn(coef):
-    b, c, s, D = coef
-    scat = hapke.scattering_efficiency(k, wave, D, s)
-    rc = hapke.radiance_coeff(scat, b, c, ff)
-    return np.linalg.norm(rc - actual)
-
-  return least_squares(obj_fn, guess, bounds=bounds, verbose=1, max_nfev=1000)
-
-
-def _optimize_k(hapke, wave, actuals, guess, bounds, coef, ff):
-  def obj_fn(k):
-    loss = 0
-    for i, actual in enumerate(actuals):
-      b, c, s, D = coef[i:12:3]
-      scat = hapke.scattering_efficiency(k, wave, D, s)
-      rc = hapke.radiance_coeff(scat, b, c, ff[i])
-      loss += ((rc - actual)**2).sum()
-    return np.sqrt(loss)
-
-  return least_squares(obj_fn, guess, bounds=bounds, verbose=2, method='trf',
-                       tr_solver='lsmr', max_nfev=20)
-
-
-def MasterKcombine(mir_k_fname, mir_v_fname, wavelength, solved_k, fit_order=3,
-                   resample=False):
-  """Takes data from vnir k and dispersion k and turns it into a
-  single adjusted vector with help from the user."""
-  # load dispersion data
-  k = loadmat_single(mir_k_fname).ravel()
-  v = loadmat_single(mir_v_fname).ravel()
-
-  lam = wavelength
-  vnirk = solved_k
-
-  # a little modeling magic to make the arrays meet
-  # in case you cut off some noise at the end
-
-  # get a frequency space vector for vnirk
-  vnirv = 10000 / lam
-  # find high end of v
-  vend = v.max()
-  # check to make sure we need to do this modelling
-  if vend < vnirv.min():
-    lamdiff = lam[1] - lam[0]
-    newend = 10000/vend - lamdiff
-    # fit the end of the data so that it will meet the MIR data
-    poly = np.poly1d(np.polyfit(lam[-50:], vnirk[-50:], fit_order))
-    # extrapolate the end of lam
-    lamend = np.arange(lam[-1], newend, lamdiff)
-    vnirk = np.concatenate((vnirk, poly(lamend)))
-    lam = np.concatenate((lam, lamend))
+    # get a frequency space vector for vnirk
     vnirv = 10000 / lam
 
-  # HERE IS WHERE WE ADJUST THE MIR DATA DOWN TO THE VNIR DATA
-  # (n would go up based on epsilon infinity values so k goes down)
+    rev_vnirv = vnirv[::-1]
+    rev_vnirk = vnirk[::-1]
 
-  # make sure we are picking the low end of the VNIR data
-  low = vnirk[-1] if lam[0] < lam[-1] else vnirk[0]
-  # next make sure we are picking high frequency end of MIR data
-  hi = k[0] if v[0] > v[-1] else k[-1]
+    ax3 = axes[1,0]
+    ax3.semilogy(vnirv, vnirk)
+    ax3.set_ylabel('k')
+    ax3.set_xlabel('Wavenumber(cm e-1)')
+    ax3.set_title('VNIR k')
+    ax3.invert_xaxis() 
 
-  # correct for offset in MIR data
-  offset = hi - low
-  adjk = k - offset
+    #Evenly Spacing stuff
+    vdiff = abs(v[1] - v[0])
 
-  # make sure frequency is ascending
-  if vnirv[0] > vnirv[-1]:
-    vnirv = vnirv[::-1]
-    vnirk = vnirk[::-1]
-  if v[0] > v[-1]:
-    v = v[::-1]
-    adjk = adjk[::-1]
+    #Determine # of pts in VNIRV
+    vnirvsize = round(abs(rev_vnirv[0] - rev_vnirv[-1])) / vdiff
+    vnirvdiff =(abs(vnirv[0]-vnirv[-1]))/vnirvsize; 
+    even_vnirv = np.linspace(rev_vnirv[0], rev_vnirv[-1], vnirvsize)
+    interp_ob = PchipInterpolator(rev_vnirv, rev_vnirk)
+    even_vnirk = interp_ob(even_vnirv)
+    #This now has the same point spacing as v, so we should have same weight in integral
 
-  # remove negative data
-  mask = adjk > 0
-  v = v[mask]
-  adjk = adjk[mask]
+    #Taking out the noise
+    noisy_end = max(lam)
+    vals = abs(even_vnirv - 10000/noisy_end)
+    minloc = np.argmin(vals) + 1 # Remove the noisy end
+    new_vnirv = even_vnirv[minloc:] #even vnirv - is in ascending order -- so we need to get from minloc
+    new_vnirk = even_vnirk[minloc:]
 
-  # cat them together (mid ir will always be first in frequency space)
-  fullv = np.concatenate((v, vnirv))
-  fullk = np.concatenate((adjk, vnirk))
+    ax4 = axes[1,1]
+    ax4.semilogy(vnirv, vnirk, label='VNIR k')
+    ax4.semilogy(even_vnirv, even_vnirk, '--r', label='Evenly spaced VNIR k')
+    ax4.semilogy(new_vnirv, new_vnirk, '-.g', label = 'VNIR k without noisy end')
+    ax4.legend()
+    ax4.set_ylabel('k')
+    ax4.set_xlabel('Wavenumber(cm e-1)')
+    ax4.set_title('VNIR k')
+    ax4.invert_xaxis()
 
-  if resample:
-    # reinterpolate so vector is evenly spaced
-    evenfullv = np.linspace(fullv[0], fullv[-1], len(fullv))
-    fullk = np.interp(evenfullv, fullv, fullk)
-    fullv = evenfullv
+    #Make sure we are combining this correctly
+    #We want to be in descending wavenumbers
+    #Find the low end of vnirv (high wavelength)
+    if new_vnirv[0] > new_vnirv[-1]:
+        vnirv_end = new_vnirv[-1]
+    else:
+        new_vnirv = np.flip(new_vnirv, axis=0)
+        new_vnirk = np.flip(new_vnirk, axis=0)
+        vnirv_end = new_vnirv[-1]
 
-  return np.column_stack((fullv, fullk))
+    #Find High end of v
+    if v[0] > v[-1]:
+        v_end = v[-1]
+    else:
+        v = np.flip(v, axis=0)
+        k = np.flip(k, axis=0)
+        v_end = v[0] # Note that v[-1] and v_end will not be the same
 
+    cache = (v, k, lam, vnirk, vnirv, rev_vnirk, rev_vnirv, even_vnirk, even_vnirv, new_vnirk, new_vnirv, vnirv_end, v_end, vdiff, vnirvdiff)
 
-def MasterSSKK(dispersion, n1, anchor, num_intervals=100):
-  """This section determines the real index of refraction (n) from k,
-  using a singly subtractive Kramers Kronig calculation."""
-  # the result of MasterKcombine
-  v, k = dispersion.T
+    if adjType == '0':
+        adj_method_0(cache)
+    elif adjType == '1':
+        adj_method_1(cache)
+    elif adjType == '2':
+        adj_method_2(cache)
+    else:
+        adj_method_3(cache)
 
-  v1 = 10000 / anchor  # convert to frequency
+def adj_method_0(cache):
+    (v, k, lam, vnirk, vnirv, rev_vnirk, rev_vnirv, even_vnirk, even_vnirv, new_vnirk, new_vnirv, vnirv_end, v_end, vdiff, vnirvdiff) = cache
 
-  # make start point and end point values for integration that place k at the
-  # center of each range
-  dv = v[1] - v[0]
-  dx = dv / num_intervals
-  halfv = dv / 2
-  offset = np.linspace(-halfv, halfv, num_intervals)
-  xx = v + offset[:,None]
+    if v_end < vnirv_end:
+        vcon = np.linspace(vnirv_end-vdiff, v_end+vdiff, round(abs((v_end+vdiff)-(vnirv_end-vdiff))/vdiff));
+        m = (k[0]-new_vnirk[-1])/(v[0]-newvnirv[-1]);
+        #remember that they are arranged by decreasing wavenumber
+        kcon = np.zeros(vcon.shape);
+        for i in len(vcon):
+            kcon[i] = m*(vcon[i]-new_vnirv[-1])+new_vnirk[-1]
+        fullv = np.concatenate((new_vnirv, vcon, v), axis=None)
+        fullk = np.concatenate((new_vnirk, kcon, k), axis=None)
 
-  # compute all the bits that don't change in the loop
-  v_sq = v**2
-  v1_sq = v1**2
-  n = (2/np.pi) * (v_sq - v1_sq) * dx
-  xx_sq = xx ** 2
-  numerator = xx * k / (xx_sq - v1_sq)
+        fig1, ax1 = plt.subplots(figsize=(6, 4), frameon=False)
+        ax1.semilogy(v, k, label='MIR k')
+        ax1.semilogy(new_vnirv, new_vnirk, label='Evenly spaced VNIR k')
+        ax1.semilogy(vcon, kcon,  label = 'Extended k')
+        ax1.semilogy(fullv, fullk, label = 'Whole k')
+        ax1.legend()
+        ax1.set_xlabel('Wavenumber(cm e-1)')
+        ax1.set_ylabel('k')
+        ax1.set_title('Combined k')
+        ax1.invert_xaxis()
+        
+        nv = v
+        nk = k
+    elif v_end >= vnirv_end:
+        #cut some off MIR to connect the dots
+        min_index = np.argmin(abs(v-vnirv_end))
+        v_end = v[min_index]
+        nv = v[min_index+1:]
+        nk = k[min_index+1:]
+        #remember that they are arranged by decreasing wavenumber
+        fullv = np.concatenate((new_vnirv,nv), axis=None)
+        fullk = np.concatenate((new_vnirk,nk), axis=None)
+        
+        fig1, ax1 = plt.subplots(figsize=(6, 4), frameon=False)
+        ax1.semilogy(v, k, label='MIR k')
+        ax1.semilogy(nv, nk, label='Cropped MIR k')
+        ax1.semilogy(new_vnirv, new_vnirk, label = 'Evenly spaced VNIR k')
+        ax1.semilogy(fullv, fullk, label = 'Whole k')
+        ax1.legend()
+        ax1.set_xlabel('Wavenumber(cm e-1)')
+        ax1.set_ylabel('k')
+        ax1.set_title('Combined k')
+        ax1.invert_xaxis()
 
-  # TODO: look into vectorizing this fully. It's not too hard, but might be more
-  # memory than we'd like to spend.
-  for i, v_sq_i in enumerate(v_sq):
-    # Compute function over all xx for each v_j
-    yy = numerator / (xx_sq - v_sq_i)
-    # calculate the real index of refraction with integral over the grid
-    n[i] *= trapz(yy, axis=0).sum()
-  n += n1
+def adj_method_1(cache):
+    (v, k, lam, vnirk, vnirv, rev_vnirk, rev_vnirv, even_vnirk, even_vnirv, new_vnirk, new_vnirv, vnirv_end, v_end, vdiff, vnirvdiff) = cache
 
-  return np.column_stack((v, n))
+    #Make a linearly increasing array
+    y = np.linspace(0.0000001, 1, len(k))
+    #Make an array that is exponential in logspace
+    y_scale = 10**(y**10)
+    #Flip it so that it is multiplying correctly
+    y_scale = np.flip(y_scale, axis=0)
+    #Adjust MIR k by dividing the scaling factor
+    nk = k / y_scale
 
+    #Plot
+    fig1, ax1 = plt.subplots(figsize=(6, 4), frameon=False)
+    ax1.semilogy(v, k, label='MIR k')
+    ax1.semilogy(v, nk, label='Scaled MIR k')
+    ax1.semilogy(even_vnirv, even_vnirk,  label = 'Evenly spaced VNIR k')
+    ax1.legend()
+    ax1.set_xlabel('Wavenumber(cm e-1)')
+    ax1.set_ylabel('k')
+    ax1.set_title('VNIR k')
+    ax1.invert_xaxis()
 
-def MasterPhase1(hapke, spectra, coefg, lb, ub, ff):
-  """Use data from multiple viewing geometries to calculate phase function
-  parameters for a sample where k and n for thetai=30, thetae=0 is known.
-  This program downsamples the data and then uses a minimization routine
-  to find the best wavelength-dependent b and c coefficients by
-  minimizing the difference between the calculated and observed data for
-  multiple viewing geometries and multiple grain sizes simultaneously.
-  """
-  # TODO: downsample? would need to adjust spectra, k, n
-  wave = spectra[0][:,0]
-  actuals = [traj[:,1] for traj in spectra]
+    #Now quick and dirty linear connection
+    if v_end < vnirv_end:
+        vcon = np.linspace(vnirv_end - vdiff, vnirv_end + vdiff, round(abs((v_end + vdiff) - (vnirv_end - vdiff)) / vdiff))
+        m = (nk[0] - new_vnirk[-1]) / ( v[0] - new_vnirv[-1])
+        # Remember that they are arranged by decreasing wavenumber
+        kcon = np.zeros(vcon.shape)
+        for i in len(vcon):
+            kcon[i] = m * ( vcon[i] - new_new_vnirv[-1]) + new_vnirk[-1]
+        full_v = np.concatenate((new_vnirv, vcon, v), axis=None) # Default axis = 0. Row-wise
+        full_k = np.concatenate((new_vnirk, kcon, nk), axis=None)
 
-  # TODO: solve for k, b, c, s, D (see MasterPhaseWrapper_Byt2)
-  # could use alternating minimizer here, like optimize_global_k
-  solutions = []
-  return solutions
+        fig2, ax2 = plt.subplots(figsize=(6, 4), frameon=False)
+        ax2.semilogy(v, k, label='MIR k')
+        ax2.semilogy(v, nk, label='Scaled MIR k')
+        ax2.semilogy(new_vnirv, new_vnirk, label = 'Evenly spaced VNIR k')
+        ax2.semilogy(vcon, kcon, label = 'Extended k')
+        ax2.semilogy(full_v, full_k, label = 'Whole k')
+        ax2.legend()
+        ax2.set_xlabel('Wavenumber(cm e-1)')
+        ax2.set_ylabel('k')
+        ax2.set_title('VNIR k')
+        ax2.invert_xaxis()
+
+    elif v_end >= vnirv_end:
+        #Cut some off MIR to connect the dots
+        min_index = np.argmin(abs(v - vnirv_end))
+        v_end = v[min_index]
+        nv = v[(min_index + 1):]
+        nk = nk[(min_index+1):]
+
+        #Remember that they are arranged by decreasing wavenum
+        fullv = np.concatenate((new_vnirv, nv), axis=None) # Default axis = 0. Row-wise
+        fullk = np.concatenate((new_vnirk, nk), axis=None)
+
+        fig2, ax2 = plt.subplots(figsize=(6, 4), frameon=False)
+        ax2.semilogy(v, k, label='MIR k')
+        ax2.semilogy(nv, nk, label='scaled MIR k')
+        ax2.semilogy(new_vnirv, new_vnirk, label = 'Evenly spaced VNIR k')
+        ax2.semilogy(fullv, fullk, label = 'Whole k') ## There is a additional label in the matlab code
+        ax2.legend()
+        ax2.set_xlabel('Wavenumber(cm e-1)')
+        ax2.set_ylabel('k')
+        ax2.set_title('Combined k')
+        ax2.invert_xaxis()
+
+def adj_method_2(cache):
+    (v, k, lam, vnirk, vnirv, rev_vnirk, rev_vnirv, even_vnirk, even_vnirv, new_vnirk, new_vnirv, vnirv_end, v_end, vdiff, vnirvdiff) = cache
+    if v_end < vnirv_end:
+        new_end = v_end # - vnirvdiff -- taking this out leads to a double point later
+        #Fit the end of the data so that it will meet the MIR data
+        ## Requires different functions sometimes, try POLY3, POLY4
+        # deifine end of curve to fit
+        #cut off any noise at end commented out 7/17/18 FEEL FREE TO CHANGE
+        #lam=lam(1:noisend);
+        #vnirk=vnirk(1:noisend);
+        #set area to fit with a curve FEEL FREE TO CHANGE
+        ep = len(new_vnirv)
+        sp = ep - 30
+        short_vnirv = new_vnirv[sp:ep]
+        short_vnirk = new_vnirk[sp:ep]
+
+        #Fit Curve
+        fcoef = np.polyfit(short_vnirv, short_vnirk, 1)
+
+        #extrapolate the end of lam
+        #find spacing
+        vspace = round(abs(new_vnirv[-1] - new_end) / vnirvdiff)
+        vnirvext = np.linspace(new_vnirv[-1], new_end, vspace)
+        #evaluate the function over the new range
+        extrak=evalPoly(fcoef, vnirvext)
+
+        #plot it to see how we did
+        fig1, ax1 = plt.subplots(figsize=(6, 4), frameon=False)
+        ax1.semilogy(vnirv, vnirk, label='VNIR k')
+        ax1.semilogy(new_vnirv, new_vnirk,  label='Shortened VNIR k')
+        ax1.semilogy(even_vnirv, even_vnirk,label = 'Evenly spaced VNIR k')
+        ax1.semilogy(vnirvext, extrak, label = 'Extended k')
+        ax1.legend()
+        ax1.set_xlabel('Wavenumber(cm e-1)')
+        ax1.set_ylabel('k')
+        ax1.set_title('Extended VNIR k')
+        ax1.invert_xaxis()
+        
+        #combine fit end with data (for this step only)
+        fvnirk=np.concatenate((new_vnirk,extrak), axis=None)
+        fv=np.concatenate((new_vnirv,vnirv_end), axis=None)
+    else:
+        fvnirk=new_vnirk # oveflap dealt with in next section for this method
+        fv=new_vnirv; 
+
+    #HERE IS WHERE WE ADJUST THE MIR DATA DOWN TO THE VNIR DATA (n would go up
+    #based on epsilon infinity values so k goes down)
+    #deal with potential overlap
+    if max(v) > min(fv):
+        minloc = np.argmin(abs(v-min(fv)))
+        nv=v[minloc+1:]
+        nk=k[minloc+1:]
+    else:#no overlap
+        nv=v
+        nk=k
+
+    #remember we know we are in descending frequency space
+    #find difference between the two k values
+    offset=nk[0]-fvnirk[-1]
+    #DEALING WITH THE POSSIBILITY THAT LOWERING MIRK MAKES NEG
+    #print error message
+    if min(nk-offset) <= 0:
+        raise ValueError('MIR k will be negative, choose another adj_method')
+    elif min(nk-offset) > 0:
+        adjk = nk-offset
+        
+        #plot it to make sure it worked
+        fig2, ax2 = plt.subplots(figsize=(6, 4), frameon=False)
+        ax2.semilogy(v, k, label='MIR k')
+        ax2.semilogy(nv, adjk, label='Adjusted MIR k')
+        ax2.legend()
+        ax2.set_xlabel('Wavenumber(cm e-1)')
+        ax2.set_ylabel('k')
+        ax2.set_title('MIR k Adjustment')
+        ax2.invert_xaxis()
+
+        fullv = np.concatenate((nv,fv), axis=None)
+        fullk = np.concatenate((adjk,fvnirk), axis=None)
+    
+        fig3, ax3 = plt.subplots(figsize=(6, 4), frameon=False)
+        ax3.semilogy(fullv, fullk, label='Combined k')
+        ax3.semilogy(nv, adjk, label='Adjusted MIR k')
+        ax3.semilogy(fv, fvnirk, label='VNIR k')
+        ax3.legend()
+        ax3.set_xlabel('Wavenumber(cm e-1)')
+        ax3.set_ylabel('k')
+        ax3.set_title('Combined k')
+        ax3.invert_xaxis()
+
+def adj_method_3(cache): #this will bring MIRk down some VNIRk up some and draw line
+    (v, k, lam, vnirk, vnirv, rev_vnirk, rev_vnirv, even_vnirk, even_vnirv, new_vnirk, new_vnirv, vnirv_end, v_end, vdiff, vnirvdiff) = cache
+
+    if v_end < vnirv_end:
+        high = min(k)
+        low = max(new_vnirk)
+        offset = high - low
+        adjk = k - offset
+        vcon = np.linspace(vnirv_end-vdiff,v_end+vdiff, round(abs((v_end+vdiff)-(vnirv_end-vdiff))/vdiff))
+        m = (adjk[0]-new_vnirk[-1])/(v[0]-new_vnirv[-1])
+        #remember that they are arranged by decreasing wavenumber
+        kcon = np.zeros(vcon.shape)
+        for i in len(vcon):
+            kcon[i] = m*(vcon[i]-new_vnirv[-1])+new_vnirk[-1]
+
+        fullv = np.concatenate((new_vnirv,vcon,v), axis=None)
+        fullk = np.concatenate((new_vnirk,kcon,adjk), axis=None)
+
+        fig1, ax1 = plt.subplots(figsize=(6, 4), frameon=False)
+        ax1.semilogy(v, k, label='MIR k')
+        ax1.semilogy(v, adjk, label='Adjusted MIR k')
+        ax1.semilogy(new_vnirv, new_vnirk, label='Evenly Spaced VNIR k')        
+        ax1.semilogy(vcon, kcon, label='Extended k')        
+        ax1.semilogy(fullv, fullk, label='Whole k')
+        ax1.legend()
+        ax1.set_xlabel('Wavenumber(cm e-1)')
+        ax1.set_ylabel('k')
+        ax1.set_title('Combined k')
+        ax1.invert_xaxis()
+
+        nv = v
+        nk = k
+    elif v_end >= vnirv_end:
+        high = min(k)
+        low = max(new_vnirk)
+        offset = high-low
+        adjk = k - offset
+        #cut some off MIR to connect the dots
+        min_index = np.argmin(abs(v-vnirv_end))
+        v_end = v[min_index]
+        nv = v[min_index+1:]
+        nk = k[min_index+1:]
+        #remember that they are arranged by decreasing wavenumber
+        fullv = np.concatenate((new_vnirv,nv), axis=None)
+        fullk = np.concatenate((new_vnirk,nk), axis=None)
+        
+        fig1, ax1 = plt.subplots(figsize=(6, 4), frameon=False)
+        ax1.semilogy(v, k, label='MIR k')
+        ax1.semilogy(v, adjk, label='Adjusted MIR k')        
+        ax1.semilogy(nv, nk, label='Cropped MIR k')    
+        ax1.semilogy(new_vnirv, new_vnirk, label='Evenly Spaced VNIR k')
+        ax1.semilogy(fullv, fullk, label='Whole k')
+        ax1.legend()
+        ax1.set_xlabel('Wavenumber(cm e-1)')
+        ax1.set_ylabel('k')
+        ax1.set_title('Combined k')
+        ax1.invert_xaxis()
+
+def evalPoly(lst, x):
+    total = []
+    for power, coeff in enumerate(lst):
+        total.append((x**power) * coeff)
+    return sum(total)

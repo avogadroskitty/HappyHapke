@@ -39,7 +39,7 @@ def main():
   try:
     tornado.ioloop.IOLoop.current().start()
   except KeyboardInterrupt:
-    print('Server shutting down.')
+     print('Server shutting down.')
 
 #Handles the incoming request
 class HapkeHandler(tornado.web.RequestHandler):

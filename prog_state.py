@@ -138,9 +138,6 @@ class ProgramState(object):
 
     self.ks[key] = solved_k
     self.scat_eff_grain[key] = scat_eff
-    print("--"*50)
-    print(plt.get_fignums())
-    print("--"*50)
     figures = [plt.figure(i) for i in plt.get_fignums()]
     return 'Solved for k: ', 'sk-' + key, figures
 
@@ -281,7 +278,7 @@ class ProgramState(object):
     msg = 'Finished %d iterations: ' % len(solns)
     return msg, 'k-global', [fig1, fig2, fig3]
 
-  def add_mir_data(self, mirk_file='', mirv_file=''):
+  def add_mir_data(self, mirk_file='', mirv_file='', adjType=3):
     # HACK: use defaults if some/all files aren't provided
     # mirk_file = mirk_file or '../data/kjar_110813_disp_k.mat'
     # mirv_file = mirv_file or '../data/kjar_110813_disp_v.mat'
@@ -290,17 +287,19 @@ class ProgramState(object):
 
     wave = self.pp_spectra['file2'][:,0]
     k = self.ks['global']
-    disp = analysis.MasterKcombine(mirk_file, mirv_file, wave, k)
-    self.dispersion = disp
+    plt.close('all')  # hack!
+    figList = analysis.MasterKcombine(mirk_file, mirv_file, wave, k, adjType)
+    figures = [plt.figure(i) for i in plt.get_fignums()]
+    #self.dispersion = disp
 
     # plot the combined dispersion data
-    fig, ax = plt.subplots(figsize=(6, 4), frameon=False)
-    ax.plot(10000/disp[:,0], disp[:,1])
-    ax.set_xlabel('Wavelength (um)')
-    ax.set_ylabel('k')
-    ax.set_title('Combined k')
-
-    return 'Combined MIR + VNIR k: ', 'dispersion', [fig]
+    #fig, ax = plt.subplots(figsize=(6, 4), frameon=False)
+    #ax.plot(10000/disp[:,0], disp[:,1])
+    #ax.set_xlabel('Wavelength (um)')
+    #ax.set_ylabel('k')
+    #ax.set_title('Combined k')
+    
+    return 'Combined MIR + VNIR k: ', 'dispersion', figures
 
   def run_sskk(self, anchor=0, grid_size=100):
     v, n = analysis.MasterSSKK(self.dispersion, self.hapke_scalar.n,

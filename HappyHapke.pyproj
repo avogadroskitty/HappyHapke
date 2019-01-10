@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{4fa5b5f0-0d9c-4b2c-952d-440ac08e70b5}</ProjectGuid>
+    <ProjectHome />
+    <StartupFile>web.py</StartupFile>
+    <SearchPath />
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+    <InterpreterId />
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
+  <PropertyGroup>
+    <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="html\details-shim.js" />
+    <Content Include="html\styles.css" />
+    <Content Include="html\web_ui.js" />
+    <Content Include="ui.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="analysis.py" />
+    <Compile Include="cli.py" />
+    <Compile Include="hapke_model.py" />
+    <Compile Include="mplweb.py" />
+    <Compile Include="prog_state.py" />
+    <Compile Include="rc_demo.py" />
+    <Compile Include="rewrite\hapke.py" />
+    <Compile Include="rewrite\main.py" />
+    <Compile Include="Utilities\DirtyHapke.py" />
+    <Compile Include="scratchpaper.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="web.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="html" />
+    <Folder Include="rewrite" />
+    <Folder Include="Utilities" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+</Project>

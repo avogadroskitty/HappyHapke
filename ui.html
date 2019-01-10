@@ -425,12 +425,24 @@ Use the plots above to determine good cutoffs.</p>
 <summary><span class='heading'>Add in MIR data</span></summary>
 <form method='POST' enctype='multipart/form-data'>
 <section>
-<div class='param_group'>
-<p>Matlab MAT-files containing a single matrix each.
-Wavelength units should be either nm or microns (not wavenumbers).</p>
-<label><input type='file' name='mirk_file' />MIR wavelength (v)</label>
-<label><input type='file' name='mirv_file' />MIR dispersion (k)</label>
-</div>
+    <div class='param_group'>
+        <p>
+            Matlab MAT-files containing a single matrix each.
+            Wavelength units should be either nm or microns (not wavenumbers).
+        </p>
+        <label><input type='file' name='mirk_file' />MIR wavelength (v)</label>
+        <label><input type='file' name='mirv_file' />MIR dispersion (k)</label>
+        <label>
+            Adjustment Type: 
+            <select name='adjType'>
+                <option value='0'>None (Bridge gap with Line)</option>
+                <option value='1'>Asymmetric (Scales VNIR side of MIR k)</option>
+                <option value='2'>Symmetric (moves MIR k down by subtraction alone)</option>
+                <option value='3' selected>Cheng's Min/Max Adjustment</option>
+            </select>
+
+        </label>
+    </div>
 </section>
 
 <input name='section' type='hidden' value='add_mir_data' />
