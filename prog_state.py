@@ -288,29 +288,36 @@ class ProgramState(object):
     wave = self.pp_spectra['file2'][:,0]
     k = self.ks['global']
     plt.close('all')  # hack!
-    figList = analysis.MasterKcombine(mirk_file, mirv_file, wave, k, adjType)
+    pltData, kset = analysis.MasterKcombine(mirk_file, mirv_file, wave, k, adjType)
+    self.vnirv, self.vnirk, self.fullv, self.fullk = kset
     figures = [plt.figure(i) for i in plt.get_fignums()]
-    #self.dispersion = disp
-
-    # plot the combined dispersion data
-    #fig, ax = plt.subplots(figsize=(6, 4), frameon=False)
-    #ax.plot(10000/disp[:,0], disp[:,1])
-    #ax.set_xlabel('Wavelength (um)')
-    #ax.set_ylabel('k')
-    #ax.set_title('Combined k')
+    self.mirdata = pltData
     
-    return 'Combined MIR + VNIR k: ', 'dispersion', figures
+    return 'Combined MIR + VNIR k: ', 'mirdata', figures
 
-  def run_sskk(self, anchor=0, grid_size=100):
-    v, n = analysis.MasterSSKK(self.dispersion, self.hapke_scalar.n,
-                               float(anchor), num_intervals=int(grid_size)).T
-    self.hapke_vector_n = self.hapke_vector_isow.copy(refraction_index=n)
+  def run_sskk(self, anchor=0.58929, grid_size=100, iter=1):
+    #This section determined the real index of refraction, n, from k, using a
+    #singly subtractive Kramers Kronig calculation. For this lamdiff, you will
+    #need MIR data of your sample and should obtain n and k for those data
+    #using a dispersion analysis (see other material).
 
-    fig, ax = plt.subplots(figsize=(6, 4), frameon=False)
-    ax.plot(10000/v, n)
-    ax.set_xlabel('Wavelength (um)')
-    ax.set_ylabel('n')
-    ax.set_title('Index of Refraction (n)')
+    #Select anchor wavelength (this is usually sodium D line of 0.58929um)
+    #this is the wavelength at which n1 was determined
+    #iteration through program
+
+    kset = self.vnirv, self.vnirk, self.fullv, self.fullk
+    wave = self.pp_spectra['file2'][:,0]
+
+    ## Old stuff -- not sure how much is to be retained
+    #v, n = analysis.MasterSSKK(self.dispersion, self.hapke_scalar.n,
+    #                           float(anchor), num_intervals=int(grid_size)).T
+    #self.hapke_vector_n = self.hapke_vector_isow.copy(refraction_index=n)
+
+    #fig, ax = plt.subplots(figsize=(6, 4), frameon=False)
+    #ax.plot(10000/v, n)
+    #ax.set_xlabel('Wavelength (um)')
+    #ax.set_ylabel('n')
+    #ax.set_title('Index of Refraction (n)')
 
     return 'Solved for n: ', 'n', [fig]
 
@@ -388,8 +395,13 @@ class ProgramState(object):
       fname = 'k_%s.txt' % names[key]
       print_vec = _vec2bytes(self.ks[key])
       return fname, 'text/plain', print_vec
-    elif param == 'dispersion':
-      return 'combined_k.txt', 'text/plain', _traj2bytes(self.dispersion)
+    elif param == 'mirdata':
+        buf = BytesIO()
+        with ZipFile(buf, mode='w') as zf:
+            for plt in self.mirdata:
+                file = '%s.txt' % plt[0]
+                zf.writestr(file, _plot2bytes(plt[1], plt[2]))
+        return 'MIR Data.zip', 'application/zip', buf.getvalue()
     elif param == 'n':
       return 'n.txt', 'text/plain', _vec2bytes(self.hapke_vector_n.n)
     else:
