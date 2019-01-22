@@ -34,6 +34,7 @@ class _BaseHapke(object):
     self._init_refraction(refraction_index)
     # later calculations need B(g) + 1
     self.Bg1 = opposition_surge + 1
+    self.n1 = refraction_index
 
   def _init_angles(self, thetai, thetae):
     thetai = np.asarray(thetai)

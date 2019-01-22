@@ -7,7 +7,6 @@ from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.ticker import MaxNLocator
 from zipfile import ZipFile
-
 import analysis
 from hapke_model import get_hapke_model
 
@@ -305,21 +304,18 @@ class ProgramState(object):
     #this is the wavelength at which n1 was determined
     #iteration through program
 
+    n1 = self.hapke_scalar.n1
     kset = self.vnirv, self.vnirk, self.fullv, self.fullk
+
     wave = self.pp_spectra['file2'][:,0]
+    _, lend, lstart = self.pp_bounds
 
-    ## Old stuff -- not sure how much is to be retained
-    #v, n = analysis.MasterSSKK(self.dispersion, self.hapke_scalar.n,
-    #                           float(anchor), num_intervals=int(grid_size)).T
-    #self.hapke_vector_n = self.hapke_vector_isow.copy(refraction_index=n)
+    pltData = analysis.MasterSSKK(kset, anchor, iter, wave, n1, lstart, lend)
 
-    #fig, ax = plt.subplots(figsize=(6, 4), frameon=False)
-    #ax.plot(10000/v, n)
-    #ax.set_xlabel('Wavelength (um)')
-    #ax.set_ylabel('n')
-    #ax.set_title('Index of Refraction (n)')
-
-    return 'Solved for n: ', 'n', [fig]
+    figures = [plt.figure(i) for i in plt.get_fignums()]
+    self.sskk = pltData
+    
+    return 'Solved for n: ', 'sskk', figures
 
   def solve_phase(self, phase_files=(), phase_thetai=(), phase_thetae=(),
                   phase_sizes=(), downsample_factor=1):
@@ -402,8 +398,14 @@ class ProgramState(object):
                 file = '%s.txt' % plt[0]
                 zf.writestr(file, _plot2bytes(plt[1], plt[2]))
         return 'MIR Data.zip', 'application/zip', buf.getvalue()
-    elif param == 'n':
-      return 'n.txt', 'text/plain', _vec2bytes(self.hapke_vector_n.n)
+    elif param == 'sskk':
+        buf = BytesIO()
+        with ZipFile(buf, mode='w') as zf:
+            for plt in self.sskk:
+                file = '%s.txt' % plt[0]
+                zf.writestr(file, _plot2bytes(plt[1], plt[2]))
+        return 'SSKK Data.zip', 'application/zip', buf.getvalue()
+        #return 'n.txt', 'text/plain', _vec2bytes(self.hapke_vector_n.n)
     else:
       raise ValueError('Unknown download type: %r' % param)
 

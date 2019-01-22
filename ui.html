@@ -433,15 +433,17 @@ Use the plots above to determine good cutoffs.</p>
         <label><input type='file' name='mirv_file' />MIR wavelength (v)</label>
         <label><input type='file' name='mirk_file' />MIR dispersion (k)</label>
         <label>
-            Adjustment Type: 
+            Adjustment Type:
             <select name='adjType'>
                 <option value='0'>None (Bridge gap with Line)</option>
                 <option value='1'>Asymmetric (Scales VNIR side of MIR k)</option>
                 <option value='2'>Symmetric (moves MIR k down by subtraction alone)</option>
-                <option value='3' selected>Cheng's Min/Max Adjustment</option>
+                <option value='3'>Cheng's Min/Max Adjustment</option>
+                <option value='4' selected> No MIR data </option>
             </select>
-
         </label>
+        <br />
+        <i>If you don't have MIR data, in Adjustment Type - use option <b> No MIR data</b> </i>
     </div>
 </section>
 

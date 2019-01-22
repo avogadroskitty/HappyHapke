@@ -7,6 +7,9 @@ plt.switch_backend('agg')
 from scipy.optimize import least_squares
 from scipy.integrate import trapz
 from scipy.interpolate import PchipInterpolator
+from scipy import interpolate
+from scipy import arange, array, exp
+import math
 
 def loadmat_single(path_or_file_obj):
   """Loads one array from a MAT-file or ascii file."""
@@ -189,6 +192,10 @@ def MasterHapke2_PP(hapke, spectra, coefg, lb, ub, ff, spts=1, **kwargs):
 
 ##Used in Section Addd MIR Data
 def MasterKcombine(mir_k, mir_v, wavelength, global_k, adjType):
+
+    if adjType == '4':
+        return no_mir_data(wavelength, global_k)
+
     k = loadmat_single(mir_k).ravel()
     v = loadmat_single(mir_v).ravel()
     
@@ -201,10 +208,12 @@ def MasterKcombine(mir_k, mir_v, wavelength, global_k, adjType):
     ax1.set_title('MIR k')
     ax1.invert_xaxis()
 
+    #If you are changing anything here please change in no_mir_data()
     lam = wavelength
     vnirk = global_k
 
-    #Plot vnirk vs wavelength
+    #Plot vnirk vs wavelength -- 
+    #If you are changing anything here please change in no_mir_data() where the same is plotted
     ax2 = axes[0,1]
     ax2.plot(lam, vnirk)
     ax2.set_ylabel('k')
@@ -215,6 +224,7 @@ def MasterKcombine(mir_k, mir_v, wavelength, global_k, adjType):
     # in case you cut off some noise at the end
 
     # get a frequency space vector for vnirk
+    #If you are changing anything here please change in no_mir_data()
     vnirv = 10000 / lam
 
     #Reverse only if not in ascending
@@ -222,6 +232,7 @@ def MasterKcombine(mir_k, mir_v, wavelength, global_k, adjType):
         rev_vnirv = np.flip(vnirv, axis=0)
         rev_vnirk = np.flip(vnirk, axis=0)
 
+    #If you are changing anything here please change in no_mir_data() where the same is plotted
     ax3 = axes[1,0]
     ax3.semilogy(vnirv, vnirk)
     ax3.set_ylabel('k')
@@ -267,7 +278,7 @@ def MasterKcombine(mir_k, mir_v, wavelength, global_k, adjType):
         new_vnirk = np.flip(new_vnirk, axis=0)
         vnirv_end = new_vnirv[-1]
 
-    #Find High end of v
+    #Find High end of v 
     if v[0] > v[-1]:
         v_end = v[-1]
     else:
@@ -282,6 +293,7 @@ def MasterKcombine(mir_k, mir_v, wavelength, global_k, adjType):
                 ['Evenly Spaced VNIR k', even_vnirv, even_vnirk],
                 ['VNIR k without noisy end', new_vnirv, new_vnirk]
                ]
+
     cache = (v, k, lam, vnirk, vnirv, rev_vnirk, rev_vnirv, even_vnirk, even_vnirv, new_vnirk, new_vnirv, vnirv_end, v_end, vdiff, vnirvdiff)
 
     if adjType == '0':
@@ -290,7 +302,7 @@ def MasterKcombine(mir_k, mir_v, wavelength, global_k, adjType):
         pltdata2, kset = adj_method_1(cache)
     elif adjType == '2':
         pltdata2, kset = adj_method_2(cache)
-    else:
+    elif adjType == '3':
         pltdata2, kset = adj_method_3(cache)
 
     plt_data.extend(pltdata2)
@@ -596,10 +608,57 @@ def evalPoly(lst, x):
         total.append((x**power) * coeff)
     return sum(total)
 
-def MasterSSKK(kset, anchor, iter, wavelength):
+def no_mir_data(lam, vnirk):
+    vnirv = 10000 / lam
+    fig, axes = plt.subplots(figsize=(12,3), nrows=1, ncols=2)
+    
+    #Plot vnirk vs wavelength
+    #If you are changing anything here please change in MaskerKCombine() where the same is plotted    
+    ax1 = axes[0]
+    ax1.plot(lam, vnirk)
+    ax1.set_ylabel('k')
+    ax1.set_xlabel('Wavelength(um)')
+    ax1.set_title('VNIR k')
+    
+    # get a frequency space vector for vnirk
+    vnirv = 10000 / lam
+
+    #If you are changing anything here please change in MaskerKCombine() where the same is plotted  
+    ax2 = axes[1]
+    ax2.semilogy(vnirv, vnirk)
+    ax2.set_ylabel('k')
+    ax2.set_xlabel('Wavenumber(cm e-1)')
+    ax2.set_title('Wavenumber(cm e-1) vs K')
+    ax2.invert_xaxis() 
+
+    plt_data = [
+                ['VNIR k', lam, vnirk],
+                ['Wavenumber(cm e-1) vs K', vnirv, vnirk]
+               ]
+
+    kset = vnirv, vnirk, None, None
+    
+    return plt_data, kset
+
+def MasterSSKK(kset, anchor, iter, wavelength, n1, lstart, lend):
     #I am using the VNIRV from the previous step - unlike the MATLAB code - Check with ELI
     vnirv, vnirk, fullv, fullk = kset
     lam = wavelength
+    
+    #get info on first and last element to re interpolate
+    first = vnirv[0]
+    last = vnirv[-1]
+    sizev = len(vnirv)
+
+    ## Skip -- kcombine option added 
+    if fullv is None and fullk is None:
+        fullv = np.linspace(first, last, sizev)
+        interp_ob = interpolate.interp1d(vnirv, vnirk, kind='linear')
+        fullk = interp_ob(fullv)
+
+    kap = fullk
+    v = fullv
+
 
     #Check if fullv, fullk is in ascending
     if fullv[-1] < fullv[0]:
@@ -611,26 +670,11 @@ def MasterSSKK(kset, anchor, iter, wavelength):
         vnirv = np.flip(vnirv, axis=0)
         vnirk = np.flip(vnirk, axis=0)
 
-    #get info on first and last element to re interpolate
-    first = vnirv[0]
-    last = vnirv[-1]
-    sizev = len(vnirv)
-
-    ## Do we need this -- we already have fullv, fullk
-    #reinterpolate so vector is evenly spaced
-    fullv = np.linspace(first, last, sizev)
-    interp_ob = interp1d(vnirv,vnirk,kind='linear')
-    fullk = interp_ob(fullv)
-
-    kap = fullk
-    v = fullv
-
     #Size of data set
     sizev = len(v)
 
     #define the real index of refraction and the anchor point
-    n1 = 0 ### What is n1??
-    lam1 = anchor #average of sodium D doublet
+    lam1 = float(anchor) #average of sodium D doublet
     v1 = 10000/lam1 #converted to frequency
 
     # intnb : specifies the number of intervals to run approximation over
@@ -643,16 +687,16 @@ def MasterSSKK(kset, anchor, iter, wavelength):
     dx = dv / intnb #spacing for all x's
     halfv = dv/2;
     offset = np.linspace(-halfv, halfv, intnb) #10 evenly spaced steps in every dv
-    xx = np.matlib.repmat(v, intnb, 1) + np.matlib.repmat(offset, sizev, 1)
+    xx = np.matlib.repmat(v, intnb, 1).T + np.matlib.repmat(offset, sizev, 1)
     #xx is ten rows to comput simultaneously, 1 for each offset for each v
 
     # compute all the bits that don't change in the loop.
     v_sq = v**2
     v1_sq = v1**2
-    n = (2/math.pi)*(v_sq-v1_sq)*dx #renmae. n is confusing
+    n = (2/math.pi)*(v_sq-v1_sq)*dx #rename. n is confusing
     xx_sq = xx**2 #v'^2
     tmp = xx_sq - v1_sq #v'^2-v1^2
-    numerator = xx * np.matlib.repmat(kap, intnb, 1) #v'*k(v')
+    numerator = xx * np.matlib.repmat(kap, intnb, 1).T #v'*k(v')
 
     #Do we need to compensate for singularities???
     #They would be at v'^2-v^2 and v'^2-v1^2
@@ -676,19 +720,18 @@ def MasterSSKK(kset, anchor, iter, wavelength):
         yy = numerator /((xx_sq-v_sq[j]) * tmp)
         # calculate the real index of refraction with integral over intnb grid
         n[j] = n[j] * np.sum(np.trapz(yy))
-    n = n + n1
+    n += n1
 
     #extract VNIR n and save to different file for later
     vlam = 10000 /v 
+    nlam = n
+
     #make sure in same order as k will be
     if vlam[0] > vlam[-1]:
         vlam = np.flip(vlam, axis=0)
         nlam = np.flip(n, axis=0)
  
-    ### What are the values for this??
-    lend = 0
-    lstart = 0
-    lamdiff = 0
+    lamdiff = lam[1] - lam[0]
     # lstart comes from UV
 
     #find the end point of n to match k
@@ -701,11 +744,12 @@ def MasterSSKK(kset, anchor, iter, wavelength):
     minloc = np.argmin(dist)
     upend = minloc
     dist = abs(vlam - lstart)
-    minloc = min(dist)
+    minloc = np.argmin(dist)
     downend = minloc
     #plot to make sure it is ok
 
-    fig1, ax1 = plt.subplots(figsize=(6, 4), frameon=False)
+    _, axes = plt.subplots(figsize=(12,3), nrows=1, ncols=2)
+    ax1 = axes[0]
     ax1.plot(vlam[:upend], nlam[:upend], label = 'n cropped at high wavelengths')
     ax1.plot(vlam[downend:upend], nlam[downend:upend], label = 'n cropped at low wavelengths')
     ax1.legend()
@@ -715,15 +759,24 @@ def MasterSSKK(kset, anchor, iter, wavelength):
 
     visvlam = vlam[downend:upend]
     vnirn = nlam[downend:upend]
-    vislam = lstart:lamdiff:lend ### Needs to be converted to python -- is this like a step??????
-    interp_ob  = interp1d(visvlam,  vnirn, kind='linear') ## Need to check if this extrapolates
-    visn = interp1(vislam)
+    
+    vislam = np.arange(lstart, lend, lamdiff)
+    
+    # I get the error  vislam has one value below the bounds while interpolating while using vislam = lam
+    #vislam = lam # 
+    #Under the assumption that lam is the same as creating a new array from lstart to lend with lamdiff spacing
+    #Eli did this in Matlab because loading an array is longer than creating a new one
+    
+    interp_ob  = interpolate.interp1d(visvlam,  vnirn, kind='linear') ## Need to check if this extrapolates
+        
+    extrap_ob = extrap1d(interp_ob)
+    visn = extrap_ob(vislam)
+    #visn = interp_ob(vislam)
     #}
 
     #get actual k wavelength becuase stupid floating points are not working
     ### what is wavelength
-    wavelength = 0
-    ksize=len(wavelength)/3
+    ksize=int(len(wavelength)/3)
     vislam=wavelength[:ksize]
 
     #lstart=lstart+iter*lamdiff;
@@ -735,20 +788,44 @@ def MasterSSKK(kset, anchor, iter, wavelength):
     downend = minloc
     visvlam = vlam[downend:upend]
     vnirn = nlam[downend:upend]
-    #extraolate to k spacing
-    interp_ob  = interp1d(visvlam,  vnirn, kind='linear') ## Need to check if this extrapolates
-    visn = interp1(vislam)
+    #extrapolate to k spacing
+    interp_ob  = interpolate.interp1d(visvlam,  vnirn, kind='linear') ## Need to check if this extrapolates
+    extrap_ob = extrap1d(interp_ob)
+    visn = extrap_ob(vislam)
+    print(visn)
+    ax2 = axes[1]
+    ax2.plot(visvlam, vnirn, label = 'n')
+    ax2.plot(vislam, visn, label = 'reinterpolated n')
+    ax2.legend()
+    ax2.set_xlabel('Wavelength(um)')
+    ax2.set_ylabel('n')
+    ax2.set_title('VNIR n')
     
-    fig1, ax1 = plt.subplots(figsize=(6, 4), frameon=False)
-    ax1.plot(visvlam, vnirn, label = 'n')
-    ax1.plot(vislam, visn, label = 'reinterpolated n')
-    ax1.legend()
-    ax1.set_xlabel('Wavelength(um)')
-    ax1.set_ylabel('n')
-    ax1.set_title('VNIR n')
-    
-    ## Do we need the below lines
-    #save some stuff for later
-    lstart2 = lstart
-    lend2 = lend
+    ## Note: We removed lines that save the lstart and lend -- 
+    ## which are the end points that may or may not have been removed
 
+    plt_data = [
+                ['n cropped at high wavelengths',vlam[:upend], nlam[:upend]],
+                ['n cropped at low wavelengths', vlam[downend:upend], nlam[downend:upend]],
+                ['n', visvlam, vnirn],
+                ['Reinterpolated n', vislam, visn]
+               ]
+
+    return plt_data
+
+def extrap1d(interpolator):
+    xs = interpolator.x
+    ys = interpolator.y
+
+    def pointwise(x):
+        if x < xs[0]:
+            return ys[0]+(x-xs[0])*(ys[1]-ys[0])/(xs[1]-xs[0])
+        elif x > xs[-1]:
+            return ys[-1]+(x-xs[-1])*(ys[-1]-ys[-2])/(xs[-1]-xs[-2])
+        else:
+            return interpolator(x)
+
+    def ufunclike(xs):
+        return list(map(pointwise, xs))
+
+    return ufunclike
