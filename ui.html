@@ -43,10 +43,11 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
 <p>Data files containing a single matrix each.
 Either Matlab (.mat) format or ASCII text format is accepted.
 Wavelength units should be either nm or microns (not wavenumbers).</p>
-<label><input type='file' class="fileElement" name='file1' />VNIR spectrum (small grain)</label>
-<label><input type='file' class="fileElement" name='file2' />VNIR spectrum (medium grain)</label>
-<label><input type='file' class="fileElement" name='file3' />VNIR spectrum (large grain)</label>
-<div id='addFiles'></div>
+<div id='addFiles'>
+    <label><input type='file' class="fileElement" name='file1' />VNIR spectrum - 1</label>
+    <label><input type='file' class="fileElement" name='file2' />VNIR spectrum - 2</label>
+    <label><input type='file' class="fileElement" name='file3' />VNIR spectrum - 3</label>
+</div>
 <span id='lnkAddMore'> Add More </span>
 <label><input type='file' name='specwave_file' />Calibration wavelength</label>
 <label><input type='file' name='calspec_file' />Calibration spectrum</label>
@@ -56,9 +57,7 @@ Wavelength units should be either nm or microns (not wavenumbers).</p>
   $('#lnkAddMore').click(function(){
     var fileElements = $('#addFiles input.fileElement');
     var index = (fileElements.length  + 1);
-    if(fileElements.length < 7){
       $('#addFiles').append('<label><input class="fileElement" type="file" name=file'+index+' />VNIR Spectrum - '+index+'</label>');
-    }
   });
 </script>
 <div class='param_group'>
@@ -168,7 +167,7 @@ Use the plots above to determine good cutoffs.</p>
 -->
 
 <details>
-<summary><span class='heading'>Solve for <i>k</i> (small)</span></summary>
+<summary><span class='heading'>Solve for <i>k</i> (File 1)</span></summary>
 <form method='POST'>
 <section>
 <div class='param_group'>
@@ -214,7 +213,7 @@ Use the plots above to determine good cutoffs.</p>
 .#####...#####
 -->
 <details>
-<summary><span class='heading'>Solve for <i>k</i> (medium)</span></summary>
+<summary><span class='heading'>Solve for <i>k</i> (File 2)</span></summary>
 <form method='POST'>
 <section>
 <div class='param_group'>
@@ -260,7 +259,7 @@ Use the plots above to determine good cutoffs.</p>
 .#####....####
 -->
 <details>
-<summary><span class='heading'>Solve for <i>k</i> (large)</span></summary>
+<summary><span class='heading'>Solve for <i>k</i> (File 3)</span></summary>
 <form method='POST'>
 <section>
 <div class='param_group'>
@@ -291,7 +290,7 @@ Use the plots above to determine good cutoffs.</p>
 
 <input name='key' type='hidden' value='file3' />
 <input name='section' type='hidden' value='solve_for_k' />
-<input type='submit' value='Run' disabled />
+<input id="kbigsubmit" type='submit' value='Run' disabled />
 </form>
 <div class='results'></div>
 </details>
@@ -308,103 +307,90 @@ Use the plots above to determine good cutoffs.</p>
 <details>
 <summary><span class='heading'>Solve for <i>k</i> (global)</span></summary>
 <form method='POST'>
-<section>
-<div class='param_group'>
-<p>Optimization Parameters</p>
-<label>
-  <select name='guess_key'>
-    <option value='file1'>Small grain</option>
-    <option value='file2' selected>Medium grain</option>
-    <option value='file3'>Large grain</option>
-  </select>
-  Previous section to take the initial guess for k from.
-</label>
-<label>
-  <input name='lowk' type='number' step='any' value='1e-8' />
-  <input name='upk' type='number' step='any' value='0.1' />
-  Lower/upper bounds for each value in k.
-</label>
-<br>
-<label>
-  <select name='opt_strategy' onchange='$(".opt_strat_desc").toggle()'>
-    <option value='fast'>Alternating minimization</option>
-    <option value='slow' selected>Single minimization (slow)</option>
-  </select>
-  Optimization strategy.
-</label>
-<label>
-  <input name='num_solns' type='number' step='1' min='1' value='1' />
-  <span class='opt_strat_desc'>
-    Number of iterations to perform (each one takes ~30 seconds).
-  </span>
-  <span class='opt_strat_desc' style='display:none;'>
-    Number of random start points to initialize with.
-  </span>
-</label>
-</div>
+    <section>
+        <div class='param_group'>
+            <p>Optimization Parameters</p>
+            <label>
+                <select id="ddlGuessKey" name='guess_key'>
+                </select>
+                Previous section to take the initial guess for k from.
+            </label>
+            <label>
+                <input name='lowk' type='number' step='any' value='1e-8' />
+                <input name='upk' type='number' step='any' value='0.1' />
+                Lower/upper bounds for each value in k.
+            </label>
+            <br>
+            <label>
+                <input name='num_solns' type='number' step='1' min='1' value='1' />
+                <span class='opt_strat_desc'>
+                    Number of iterations to perform (each one takes ~30 seconds).
+                </span>
+                <span class='opt_strat_desc' style='display:none;'>
+                    Number of random start points to initialize with.
+                </span>
+            </label>
+        </div>
 
-<div class='param_group'>
-<p>Bounds on Hapke parameters for small, medium, and large grain sizes.</p>
-<div>Coefficient b of Legendre polynomial:</div>
-<label>
-  <input name='lowb1' type='number' step='any' value='-1.7' />
-  <input name='lowb2' type='number' step='any' value='-1.7' />
-  <input name='lowb3' type='number' step='any' value='-1.7' />
-  Lower bounds.
-</label>
-<label>
-  <input name='upb1' type='number' step='any' value='1.7' />
-  <input name='upb2' type='number' step='any' value='1.7' />
-  <input name='upb3' type='number' step='any' value='1.7' />
-  Upper bounds.
-</label>
-<div>Coefficient c of Legendre polynomial:</div>
-<label>
-  <input name='lowc1' type='number' step='any' value='-1.0' />
-  <input name='lowc2' type='number' step='any' value='-1.0' />
-  <input name='lowc3' type='number' step='any' value='-1.0' />
-  Lower bounds.
-</label>
-<label>
-  <input name='upc1' type='number' step='any' value='1.0' />
-  <input name='upc2' type='number' step='any' value='1.0' />
-  <input name='upc3' type='number' step='any' value='1.0' />
-  Upper bounds.
-</label>
-<div>Internal scattering:</div>
-<label>
-  <input name='lows1' type='number' step='any' value='0' />
-  <input name='lows2' type='number' step='any' value='0' />
-  <input name='lows3' type='number' step='any' value='0' />
-  Lower bounds.
-</label>
-<label>
-  <input name='ups1' type='number' step='any' value='0.06' />
-  <input name='ups2' type='number' step='any' value='0.06' />
-  <input name='ups3' type='number' step='any' value='0.06' />
-  Upper bounds.
-</label>
-<div>Grain size:</div>
-<label>
-  <!-- <input name='lowD1' type='number' step='any' value='10' min='0' /> -->
-  <!-- <input name='lowD2' type='number' step='any' value='21' min='0' /> -->
-  <!-- <input name='lowD3' type='number' step='any' value='30' min='0' /> -->
-  <input name='lowD1' type='number' step='any' value='21' min='0' />
-  <input name='lowD2' type='number' step='any' value='35' min='0' />
-  <input name='lowD3' type='number' step='any' value='50' min='0' />
-  Lower bounds.
-</label>
-<label>
-  <!-- <input name='upD1' type='number' step='any' value='63' min='0' /> -->
-  <!-- <input name='upD2' type='number' step='any' value='90' min='0' /> -->
-  <!-- <input name='upD3' type='number' step='any' value='125' min='0' /> -->
-  <input name='upD1' type='number' step='any' value='106' min='0' />
-  <input name='upD2' type='number' step='any' value='150' min='0' />
-  <input name='upD3' type='number' step='any' value='180' min='0' />
-  Upper bounds.
-</label>
-</div>
-</section>
+        <div class='param_group'>
+            <p>Bounds on Hapke parameters for small, medium, and large grain sizes.</p>
+            <div id="bounds_group"></div>
+        </div>
+        <script>
+            $('#kbigsubmit').click(function () {
+                console.log('fff');
+                $('#ddlGuessKey').empty();
+                $("#bounds_group").empty();
+                $(".fileElement").each(function (index) {
+                    grain_lb = 0;
+                    grain_ub = 0;
+                    var elementName = $(this).attr('name'); // Holds the fileId for the files added adhoc
+                    var fileAdded = $(this).val().split('\\').pop();
+                    $("#ddlGuessKey").append('<option value="' + elementName + '">' + elementName + '</option>');
+                    switch (elementName) {
+                        case 'file1':
+                            grain_lb = 21;
+                            grain_ub = 106;
+                            break;
+                        case 'file2':
+                            grain_lb = 35;
+                            grain_ub = 150;
+                            break;
+                        case 'file3':
+                            grain_lb = 50;
+                            grain_ub = 180;
+                            break;
+                    }
+                    //Checks if the variable fileAdded is not an empty string
+                    if (fileAdded) {
+                        $("#bounds_group").append('<div class="grain_group" style="display:flex"><h3 class="param_grain_head" id="head_' + index + '"></h3>' +
+                            '<div>' +
+                            '<p>Coefficient b of Legendre polynomial:</p>' +
+                            '<label>Lower Bounds: <input name="lowb' + elementName + '"" type="number" step="any" value="-1.7" /></label>' +
+                            '<label>Upper Bounds:<input name="upb' + elementName + '"" type="number" step="any" value="1.7" /></label>' +
+                            '</div>' +
+                            '<div>' +
+                            '<p>Coefficient c of Legendre polynomial:</p>' +
+                            '<label>Lower Bounds: <input name="lowc' + elementName + '"" type="number" step="any" value="-1.0" /></label>' +
+                            '<label>Upper Bounds:<input name="upc' + elementName + '"" type="number" step="any" value="1.0" /></label>' +
+                            '</div>' +
+                            '<div>' +
+                            '<p>Internal Scattering:</p>' +
+                            '<label>Lower Bounds: <input name="lows' + elementName + '"" type="number" step="any" value="0" /></label>' +
+                            '<label>Upper Bounds:<input name="ups' + elementName + '"" type="number" step="any" value="0.06" /></label>' +
+                            '</div>' +
+                            '<div>' +
+                            '<p>Grain Size:</p>' +
+                            '<label>Lower Bounds: <input name="lowD' + elementName + '"" type="number" step="any" value="' + grain_lb + '" /></label>' +
+                            '<label>Upper Bounds:<input name="upD' + elementName + '"" type="number" step="any" value="' + grain_ub + '" /></label>' +
+                            '</div>' +
+                            '</div>');
+                        $('#head_' + index).text(elementName+":"+fileAdded);
+                    }
+                });
+            });
+        </script>
+    </section>
 
 <input name='section' type='hidden' value='optimize_global_k' />
 <input type='submit' value='Run' disabled />
@@ -492,50 +478,167 @@ Use the plots above to determine good cutoffs.</p>
 -->
 <details>
 <summary><span class='heading'>Optimize phase function parameters</span></summary>
-<form method='POST'>
-<section>
-<div class='param_group'>
-<p>VNIR spectra of the same samples at different phase angles.</p>
-<div class='phase_inputs'>
-<button type='button' onclick='remove_phase_inputs(this)'>x</button>
-<div>
-<label><input type='file' name='phase_files[]' />Spectrum file.</label>
-<label>
-  <input name='phase_thetai[]' type='number' step='any' min='-360' max=360 />
-  Incident angle (&theta;<sub>i</sub>), in degrees.
-</label>
-<label>
-  <input name='phase_thetae[]' type='number' step='any' min='-360' max=360 />
-  Emission angle (&theta;<sub>e</sub>), in degrees.
-</label>
-<label>
-  <select name='phase_sizes[]'>
-    <option value='file1' selected>Small</option>
-    <option value='file2'>Medium</option>
-    <option value='file3'>Large</option>
-  </select>
-  Grain size.
-</label>
-</div>
-</div>
-<button type='button' onclick='$(this).prev().clone().insertBefore(this);'>
-  Add another file
-</button>
-</div>
+<form method='POST' enctype='multipart/form-data'>
+    <section>
+            <div class='param_group'>
+                <p>
+                    Data files containing a single matrix each.
+                    Either Matlab (.mat) format or ASCII text format is accepted.
+                    Wavelength units should be either nm or microns (not wavenumbers).
+                </p>
+                <label><input type='file' class="pfileElement" name='pfile1' />VNIR spectrum</label>
+                <label><input type='file' class="pfileElement" name='pfile2' />VNIR spectrum</label>
+                <label><input type='file' class="pfileElement" name='pfile3' />VNIR spectrum</label>
+                <div id='addFilesPhase'></div>
+                <span id='lnkAddMorePhase'> Add More </span>
+            </div>
+            <script>
+                //Adding javascript for Section One
+                $('#lnkAddMorePhase').click(function () {
+                    var fileElements = $('#addFilesPhase input.pfileElement');
+                    var index = (fileElements.length + 1);
+                    if (fileElements.length < 7) {
+                        $('#addFilesPhase').append('<label><input class="pfileElement" type="file" name=pfile' + index + ' />VNIR Spectrum - ' + index + '</label>');
+                    }
+                });
+            </script>
+            
+            <div class='param_group'>
 
-<!--
-<div class='param_group'>
-<p>Downsampling options</p>
-<label>
-  <input name='downsample_factor' type='number' step='any' value=1 min=1 />
-  Downsampling factor. (2 = half as many wavelengths)
-</label>
-</div>
--->
-</section>
+                <label>
+                    Max Scale: <input name='maxScale' type='number' step='1' value='10' min='10' />
+                </label>
 
-<input name='section' type='hidden' value='solve_phase' />
-<input type='submit' value='Run' disabled />
+                <div>
+                    <label>
+                        Low B: <input name='lowb' type='number' step='1' value='0' />
+                    </label>
+                    <label>
+                        Up B: <input name='upb' type='number' step='1' value='1' />
+                    </label>
+                </div>
+
+                <div>
+                    <label>
+                        Low C: <input name='lowc' type='number' step='1' value='0' />
+                    </label>
+                    <label>
+                        Up C: <input name='upc' type='number' step='1' value='1' />
+                    </label>
+                </div>
+
+                <div>
+                    <label>
+                        Low S1: <input name='lows1' type='number' step='1' value='0' />
+                    </label>
+                    <label>
+                        Up S1: <input name='ups1' type='number' step='1' value='0.06' />
+                    </label>
+                    <label>
+                        Low S2: <input name='lows2' type='number' step='1' value='0' />
+                    </label>
+                    <label>
+                        Up S2: <input name='ups2' type='number' step='1' value='0.06' />
+                    </label>
+                    <label>
+                        Low S3: <input name='lows3' type='number' step='1' value='0' />
+                    </label>
+                    <label>
+                        Up S3: <input name='ups3' type='number' step='1' value='0.06' />
+                    </label>
+                </div>
+
+                <div>
+                    <label>
+                        Low D1: <input name='lowd1' type='number' step='1' value='21' />
+                    </label>
+                    <label>
+                        Up D1: <input name='upd1' type='number' step='1' value='106' />
+                    </label>
+                    <label>
+                        Low D2: <input name='lowd2' type='number' step='1' value='35' />
+                    </label>
+                    <label>
+                        Up D2: <input name='upd2' type='number' step='1' value='150' />
+                    </label>
+                    <label>
+                        Low D3: <input name='lowd3' type='number' step='1' value='50' />
+                    </label>
+                    <label>
+                        Up D3: <input name='upd3' type='number' step='1' value='180' />
+                    </label>
+                </div>
+            </div>
+            <div class='param_group'>
+                <p> INITIAL GUESSES </p>
+
+                <label>
+                    Starting B: <input name='guess_b' type='number' step='1' value='0.4' />
+                </label>
+
+                <label>
+                    Starting C: <input name='guess_c' type='number' step='1' value='0.8' />
+                </label>
+
+                <div>
+                    <label>
+                        Starting S1: <input name='guess_s1' type='number' step='1' value='0.06' />
+                    </label>
+                    <label>
+                        Starting S2: <input name='guess_s2' type='number' step='1' value='0.04' />
+                    </label>
+                    <label>
+                        Starting S3: <input name='guess_s3' type='number' step='1' value='0.02' />
+                    </label>
+                </div>
+
+                <div>
+                    <label>
+                        Starting D1: <input name='guess_d1' type='number' step='1' value='21' />
+                    </label>
+                    <label>
+                        Starting D2: <input name='guess_d2' type='number' step='1' value='90' />
+                    </label>
+                    <label>
+                        Starting D3: <input name='guess_d3' type='number' step='1' value='140' />
+                    </label>
+                </div>
+
+                <div>
+                    <p> MINIMIZATION PARAMETERS</p>
+                    <div>
+                        <div>
+                            <label>
+                                Max Function Evaluations D1: <input name='maxfun' type='number' step='1' value='100000000000' />
+                            </label>
+                        </div>
+                        <div>
+                            <label>
+                                Function Tolerance (smaller is closer match): <input name='funtol' type='number' step='1' value='0.00000000000001' />
+                            </label>
+                        </div>
+                        <div>
+                            <label>
+                                X Tolerance: <input name='xtol' type='number' step='1' value='0.0000000000001' />
+                            </label>
+                        </div>
+                        <div>
+                            <label>
+                                Maximum Iterations: <input name='maxit' type='number' step='1' value='1000' />
+                            </label>
+                        </div>
+                        <div>
+                            <label>
+                                Start Points: <input name='spts' type='number' step='1' value='30' />
+                            </label>
+                        </div>
+                    </div>
+
+             </div>
+        </section>
+
+        <input name='section' type='hidden' value='phase_solver' />
+        <input type='submit' value='Run' disabled />
 </form>
 <div class='results'></div>
 </details>

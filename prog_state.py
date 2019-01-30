@@ -14,42 +14,23 @@ from hapke_model import get_hapke_model
 class ProgramState(object):
   def initialize(self, phase_fn='legendre', scatter_type='lambertian',
                  thetai=0, thetae=0, n1=0, Bg=0,
-                 specwave_file='', calspec_file='', 
-                 file1='', file2='', file3='', file4='', file5='', file6='', file7='',  file8='', file9='', file10=''):  
+                 specwave_file='', calspec_file='', **kwargs):  
     # HACK: use defaults if some/all files aren't provided
     specwave_file = specwave_file or '../data/specwave2.mat'
     calspec_file = calspec_file or '../data/calspecw2.mat'
-    # small_file = small_file or '../data/kjs.mat'
-    # medium_file = medium_file or '../data/kjm.mat'
-    # large_file = large_file or '../data/kjb.mat'
 
-    file1 = file1 or '../data/BytWS63106i30e0.asc' 
-    file2 = file2 or '../data/BytWM106150i30e0.asc'
-    file3 = file3 or '../data/BytWB150180i30e0.asc'
-
-    #-^Above^-Default file names defined here also used in ui.html for solve for K - dropdown. If changed here must be changed there as well.
-
-    self.file_key_list = ['file4','file5','file6','file7', 'file8','file9','file10']
     # initialize the model
     HapkeModel = get_hapke_model(phase_fn=phase_fn, scatter=scatter_type)
     thetai, thetae = np.deg2rad([float(thetai), float(thetae)])
     self.hapke_scalar = HapkeModel(thetai, thetae, float(n1), float(Bg))
 
     self.spectra = {}
-    for key, infile in [('file1', file1),
-                        ('file2', file2),
-                        ('file3', file3),
-                        ('file4', file4),
-                        ('file5', file5),
-                        ('file6', file6),
-                        ('file7', file7),
-                        ('file8', file8),
-                        ('file9', file9),
-                        ('file10', file10)]:
+    for key in kwargs:
+        if 'file' in key:
       #Checks if the infile variable has a string -- sanity check if not all ten files are uploaded
       #self.spectra has the number of grain files included in the process
-      if not infile == '':
-        self.spectra[key] = analysis.loadmat_single(infile)
+          if not kwargs[key] == '':
+            self.spectra[key] = analysis.loadmat_single(kwargs[key])
 
     # data to be filled in (later) for each grain size
     self.pp_spectra = {}
@@ -67,15 +48,9 @@ class ProgramState(object):
     num_plots = 2 if self.hapke_scalar.needs_isow else 1
     fig = Figure(figsize=(9, 4), frameon=False, tight_layout=True)
     ax1 = fig.add_subplot(1, num_plots, 1)
-
-    #Three default files loaded into the spectra dictionary are plotted on the graph
-    ax1.plot(*self.spectra['file1'].T, label='Small grain')
-    ax1.plot(*self.spectra['file2'].T, label='Medium grain')
-    ax1.plot(*self.spectra['file3'].T, label='Large grain')
     
     #Adding plots for files uploaded - can upload maximum of 10 files including the three default
-    for k in self.file_key_list:
-      if k in self.spectra:
+    for k in self.spectra:
         ax1.plot(*self.spectra[k].T, label=k)
 
     ax1.set_xlabel('Wavelength ($\mu{}m)$')
@@ -109,13 +84,9 @@ class ProgramState(object):
     # plot the results
     fig = Figure(figsize=(6, 4), frameon=False, tight_layout=True)
     ax = fig.gca()
-    ax.plot(*self.pp_spectra['file1'].T, label='Small grain')
-    ax.plot(*self.pp_spectra['file2'].T, label='Medium grain')
-    ax.plot(*self.pp_spectra['file3'].T, label='Large grain')
 
     #If additional files exist we plot them 
-    for k in self.file_key_list:
-      if k in self.pp_spectra:
+    for k in self.pp_spectra:
         ax.plot(*self.pp_spectra[k].T, label=k)
 
     ax.legend(fontsize='small', loc='best')
@@ -140,7 +111,9 @@ class ProgramState(object):
     figures = [plt.figure(i) for i in plt.get_fignums()]
     return 'Solved for k: ', 'sk-' + key, figures
 
-  def optimize_global_k(self, guess_key='file2', opt_strategy='slow',lowb1=0, lowb2=0, lowb3=0, upb1=0, upb2=0, upb3=0, lowc1=0, lowc2=0, lowc3=0, upc1=0, upc2=0, upc3=0, lows1=0, lows2=0, lows3=0, ups1=0, ups2=0, ups3=0,lowD1=0, lowD2=0, lowD3=0, upD1=0, upD2=0, upD3=0,lowk=0, upk=0, num_solns=1, **kwargs):
+  def optimize_global_k(self, guess_key='file2', opt_strategy='slow',lowbfile1=0, lowbfile2=0, lowbfile3=0, upbfile1=0, upbfile2=0, upbfile3=0,
+                       lowcfile1=0, lowcfile2=0, lowcfile3=0, upcfile1=0, upcfile2=0, upcfile3=0, lowsfile1=0, lowsfile2=0, lowsfile3=0,
+                      upsfile1=0, upsfile2=0, upsfile3=0,lowDfile1=0, lowDfile2=0, lowDfile3=0, upDfile1=0, upDfile2=0, upDfile3=0,lowk=0, upk=0, num_solns=1, **kwargs):
     #The previous step only approximates for a single grain size
     #Should we have guesses for all grain samples or only the ones we have approximated for?
     no_of_grain_samples = len(self.spectra)
@@ -173,26 +146,32 @@ class ProgramState(object):
     # set up bounds
     lb = np.empty_like(guesses)
     #Values that will be there regardless if additional grain sizes are uploaded
-    lb[:12] = [lowb1, lowb2, lowb3, lowc1, lowc2, lowc3, lows1, lows2, lows3,
-    lowD1, lowD2, lowD3]
+    lb[:12] = [lowbfile1, lowbfile2, lowbfile3, lowcfile1, lowcfile2, lowcfile3, lowsfile1, lowsfile2, lowsfile3,
+    lowDfile1, lowDfile2, lowDfile3]
 
     temp_low_bound = []
-
+    temp_up_bound=[]
     for grain in self.spectra.keys():
       if grain not in ['file1', 'file2', 'file3']:
-        temp_low_bound.append(kwargs['lowb_'+grain])
-        temp_low_bound.append(kwargs['lowc_'+grain])
-        temp_low_bound.append(kwargs['lows_'+grain])
-        temp_low_bound.append(kwargs['lowD_'+grain])
+        temp_low_bound.append(kwargs['lowb'+grain])
+        temp_low_bound.append(kwargs['lowc'+grain])
+        temp_low_bound.append(kwargs['lows'+grain])
+        temp_low_bound.append(kwargs['lowD'+grain])
+
+        temp_up_bound.append(kwargs['upb'+grain])
+        temp_up_bound.append(kwargs['upc'+grain])
+        temp_up_bound.append(kwargs['ups'+grain])
+        temp_up_bound.append(kwargs['upD'+grain])
 
     lb[12:total_guesses] = temp_low_bound
     #Filling in rest of the values
     lb[total_guesses:] = lowk
 
     ub = np.empty_like(guesses)
-    ub[:12] = [upb1, upb2, upb3, upc1, upc2, upc3, ups1, ups2, ups3,
-    upD1, upD2, upD3]
-    ub[12:] = upk
+    ub[:12] = [upbfile1, upbfile2, upbfile3, upcfile1, upcfile2, upcfile3, upsfile1, upsfile2, upsfile3,
+    upDfile1, upDfile2, upDfile3]
+    ub[12:total_guesses] = temp_up_bound
+    ub[total_guesses:] = upk
     self.bounds = (lb, ub)
 
     # solve
@@ -218,7 +197,7 @@ class ProgramState(object):
     #  axes[i,0].set_ylabel(key)
     
     #Label the columns
-    axes[0,0].set_ylabel('file2')
+    axes[0,0].set_ylabel('file1')
     axes[1,0].set_ylabel('file2')
     axes[2,0].set_ylabel('file3')
     axes[0,0].set_title('b')
@@ -278,9 +257,6 @@ class ProgramState(object):
     return msg, 'k-global', [fig1, fig2, fig3]
 
   def add_mir_data(self, mirk_file='', mirv_file='', adjType=3):
-    # HACK: use defaults if some/all files aren't provided
-    # mirk_file = mirk_file or '../data/kjar_110813_disp_k.mat'
-    # mirv_file = mirv_file or '../data/kjar_110813_disp_v.mat'
     mirk_file = mirk_file or '../data/bytMIRk.mat'
     mirv_file = mirv_file or '../data/bytMIRv.mat'
 
@@ -308,14 +284,70 @@ class ProgramState(object):
     kset = self.vnirv, self.vnirk, self.fullv, self.fullk
 
     wave = self.pp_spectra['file2'][:,0]
-    _, lend, lstart = self.pp_bounds
+    _, lend, lstart = self.pp_bounds #low, high, UV
 
-    pltData = analysis.MasterSSKK(kset, anchor, iter, wave, n1, lstart, lend)
+    pltData, vars = analysis.MasterSSKK(kset, anchor, iter, wave, n1, lstart, lend)
 
     figures = [plt.figure(i) for i in plt.get_fignums()]
     self.sskk = pltData
+
+    ## Should this be overwritten in self.pp_bounds -- I guess not we need the low from preprocessing
+    self.sskk_lstart, self.sskk_lend, self.sskk_lamdiff, self.vislam, self.visn = vars
     
     return 'Solved for n: ', 'sskk', figures
+
+  def phase_solver(self, pfile1='', pfile2='', pfile3='', pfile4='', pfile5='', pfile6='', pfile7='',  pfile8='', pfile9='', pfile10='',
+                   maxScale=10, lowb=0, upb=1, lowc=0, upc=1, lows1=0, ups1 = 0.06, lows2=0, ups2=0.06, lows3=0, ups3=0.06, maxfun = 1000000000000000000, spts=30, funtol = 0.00000000000001, xtol= 0.00000000000001, maxit=1000 , 
+                   lowd1=21, upd1=106, lowd2=31, upd2=150, lowd3=50, upd3=180, guess_b=0.4, guess_c=0.8, guess_d1=50, guess_d2=90, guess_d3=140, guess_s1=0.06, guess_s2=0.04, guess_s3=0.02 ):
+      k = self.ks['global']
+
+      pfile1 = pfile1 or '../data/BytWS63106i30e0.asc' 
+      pfile2 = pfile2 or '../data/BytWM106150i30e0.asc'
+      pfile3 = pfile3 or '../data/BytWB150180i30e0.asc'
+
+      #Input: grain size, phase angle
+
+      #Change to include 70 --- yes 70 files : min, 6*3
+      self.phase_file_key_list = ['pfile4','pfile5','pfile6','pfile7', 'pfile8','pfile9','pfile10']
+
+      self.phases = {}
+      for key, infile in [('pfile1', pfile1),
+                        ('pfile2', pfile2),
+                        ('pfile3', pfile3),
+                        ('pfile4', pfile4),
+                        ('pfile5', pfile5),
+                        ('pfile6', pfile6),
+                        ('pfile7', pfile7),
+                        ('pfile8', pfile8),
+                        ('pfile9', pfile9),
+                        ('pfile10', pfile10)]:
+        #Checks if the infile variable has a string -- sanity check if not all ten files are uploaded
+        #self.phases has the number of grain files included in the process
+        if not infile == '':
+            self.phases[key] = analysis.loadmat_single(infile) # Shape (N,2)
+
+        #This program will use data from multiple viewing geometries to calculate
+        #phase function parameters for a sample where k and n for i=30, e=0 is already
+        #known. 
+        #This program downsamples the data and then uses a
+        #minimization routine to find the best wavelength dependent b and c
+        #coefficients for the phase function by minimizing the difference between
+        #the calculated and observed data for multiple viewing geometries and
+        #multiple grain sizes simultaneously.
+
+      lstart2 = self.sskk_lstart
+      lend2 = self.sskk_lend
+      lamdiff = self.sskk_lamdiff
+      low, high, UV = self.pp_bounds
+      vislam, visn = self.vislam, self.visn
+      wavelength = self.pp_spectra['file2'][:,0] 
+      params = (lstart2, lend2, low, UV, lamdiff, maxScale, lowb, upb, lowc, upc, lows1, ups1, lows2, ups2, lows3, ups3, 
+                   lowd1, upd1, lowd2, upd2, lowd3, upd3, guess_b, guess_c, guess_d1, guess_d2, guess_d3, guess_s1, guess_s2, guess_s3, 
+                   maxfun, funtol, xtol, maxit, spts, vislam, visn, wavelength, k)
+
+      pltdata, vars = analysis.solve_phase(self.phases, params)
+
+      return 'Phase Solved ', 'psolve', figures
 
   def solve_phase(self, phase_files=(), phase_thetai=(), phase_thetae=(),
                   phase_sizes=(), downsample_factor=1):
@@ -367,7 +399,6 @@ class ProgramState(object):
   #Download Handler - When param passed is according to the section
   def _download_data(self, param):
     names = {
-        'file1': 'SmallGrain', 'file2': 'MediumGrain', 'file3': 'LargeGrain',
         'global': 'Global', 
         'file1':'File_1', 'file2': 'File_2','file3':'File_3', 'file4': 'File_4', 'file5':'File_5', 'file6': 'File_6', 'file7' : 'File_7'
     }

@@ -758,4 +758,267 @@ def MasterSSKK(kset, anchor, iter, wavelength, n1, lstart, lend):
                 ['Reinterpolated n', vislam, visn]
                ]
 
-    return plt_data
+    vars = lstart, lend, lamdiff, vislam, visn
+
+    return plt_data, vars
+
+def solve_phase(phase_files, params):
+    (lstart2, lend2, low, UV, lamdiff, maxScale, lowb, upb, lowc, upc, lows1, ups1, lows2, ups2, lows3, ups3, 
+    lowd1, upd1, lowd2, upd2, lowd3, upd3, guess_b, guess_c, guess_d1, guess_d2, guess_d3, guess_s1, guess_s2, guess_s3,
+    maxfun, funtol, xtol, maxit, spts, vislam, visn, wavelength, k) = params
+
+    phase_file_key_list = list(phase_files.keys())
+    nfiles = len(phase_file_key_list)
+    prow, pcol = phase_files['pfile1'].shape
+    
+    wave = phase_files['pfile1'][:,0] #Shape (N,2) -- Take only first column
+    eps = 0.01
+
+    #find indices of those values in the wavelength vector
+    #recreate the wavelength vector
+    lowind = np.where(abs(wave-low) <= eps)[0][0]  
+    highind = np.where(abs(wave-lend2) < (lamdiff/4))[0][0]
+    wave = wave[lowind:highind]
+    prow2 = wave.shape[0]
+
+    #extract reflectance data over new, smaller range and make it just data
+    full_phase = np.zeros((nfiles, prow, pcol))
+    for i, key in enumerate(phase_file_key_list):
+        full_phase[i, :] = phase_files[key]
+
+    phasedata = np.zeros((nfiles, prow2))
+    phasedata = full_phase[:,:,1][lowind:highind]
+
+    #extend data into UV based on assumptions
+    #extrapolate left side of k to 0.2 using ahrekiel's constant method
+    #Cloutis 2008b shows that jarsotie is essentially flat from 200-400nm
+
+    leftw = np.arange(UV, wave[0], lamdiff)
+    head = len(leftw)
+
+    #fit the end of the data 
+    #REQUIRES DIFFERENT FUCNTION SOMETIMES, TRY 'poly3' and 'poly4'
+    #'linearinterp' works better than 'poly1'
+    #type help curvefit or doc fit to bring up more info
+    #define end of curve to fit (must be column vectors)
+    #upper end of fittable range or feature
+    sp = 1
+    #change ep to end of useable feature (index not wavelength)
+    ep = sp+4;
+    shortlam = wave[sp:ep]
+    prow3 = shortlam.shape[0]
+
+    feature = np.zeros((nfiles, prow3))
+    feature = phasedata[:, sp:ep]
+     
+    #Fit Curve
+    fit_order = 2
+    fit_coefs_count = fit_order + 1 
+    fcoef = np.zeros((nfiles, fit_coefs_count))
+    fcoef = np.polyfit(shortlam, feature.T, fit_order)
+
+    UVdata = np.zeros((nfiles, head))
+    for i in range(nfiles):
+        UVdata[i,:] = evalPoly(fcoef[i], leftw)
+       
+    longphasedata = np.zeros((nfiles, head+prow3))
+    longphasedata = np.concatenate((UVdata, phasedata[:,1:]),axis=1)
+    wave = np.concatenate((leftw, wave[1:]),axis=0)
+
+    v = vislam
+    n = visn
+
+    #make sure the arrays are all the same length
+    kwave = wavelength
+    if v[0] > kwave[0]:
+        offset = v[0] - kwave[0]
+        indexoff = round(offset/lamdiff)
+        newstart = indexoff + 1
+        kwave = kwave[newstart:]
+        k = k[newstart:end]
+
+    #make sure the phase arrays are all the same length as n and k
+    #fix start point
+    if wave[0] < kwave[0]:
+        offset = kwave[0] - wave[0]
+        indexoff = round(offset/lamdiff)
+        newstart = indexoff + 1
+        wave = wave[newstart:end]
+        longphasedata = longphasedata[:,newstart:]
+
+    #fix end point
+    if kwave[-1] < wave[-1]:
+        newend = len(kwave)
+        wave = wave[:newend]
+        longphasedata = longphasedata[:, :newend]
+    
+    sizep=len(wave)
+    
+    #Will have 7 columns
+    X = np.repeat(wave[:, np.newaxis], 7, axis=1)
+    
+    #create coefficient array - this is what the program is solving for
+    #lower limit for b
+    lowbv1 = np.repeat(int(lowb), sizep, axis=0)
+    #lower limit for c
+    lowcv = np.repeat(int(lowc), sizep, axis=0)
+    #calculate bounds of offset
+    lb=np.array([lowbv1,lowbv1,lowbv1,lowcv,lowcv,lowcv,lowd1,lowd2,lowd3,lows1,lows2,lows3,1])
+    
+    #upper limit for b
+    upbv1 = np.repeat(int(upb), sizep, axis=0)
+    #upper limit for c
+    upcv = np.repeat(int(upc), sizep, axis=0)
+    #upper bound
+    ub=np.array([upbv1,upbv1,upbv1,upcv,upcv,upcv,upd1,upd2,upd3,ups1,ups2,ups3,10])
+
+    #starting values for b
+    b1 = b2  = b3 = np.repeat(float(guess_b), sizep, axis=0)
+    
+    #starting values for c
+    c1 = c2  = c3 = np.repeat(float(guess_c), sizep, axis=0)
+    
+    #guess for a k scale factor
+    scale=1
+    #initial guess array
+    coefg=np.array([b1,b2,b3,c1,c2,c3,guess_d1,guess_d2,guess_d3,guess_s1,guess_s2,guess_s3,scale])
+
+    n = np.repeat(n, 7, axis=0)
+    
+    #define thetai and thetae (as many angles as sets of angle data)
+    thetai = np.array([-15, -20, -25, -30, -35, -40, -45]) ## Should this be input?? If they are for each of the input files then..... why are there so many
+    thetae = np.array([0, 0, 0, 0, 0, 0, 0])
+
+    thetai = np.repeat(thetai.reshape(len(thetai),1), sizep, axis=1)
+    thetae = np.repeat(thetae.reshape(len(thetae),1), sizep, axis=1)
+
+    #PERFORM OTHER TIME CONSUMING CALCULATIONS OUT OF LOOP AND FEED THROUGH IN
+    #IN ANONYMOUS FUNCTION
+    Bg = 0
+    Bgplus1 = Bg + 1
+    #Phase angle (g)
+    g = math.radians(abs(thetae-thetai))
+    #cos(g)
+    cosg = cos(g)
+    #u_0
+    u0 = cos(math.radians(thetai))
+    #u
+    u = cos(math.radians(thetae))
+
+    PoreK1 = PoreK2 = PoreK3 = 0
+    u0K1 = u0K2 = u0K3 = u0
+    uK1 = uK2 = uK3 = u
+
+    #create size variable for later calculation
+    sizeb = longphasedata.shape[1] / 3
+    #will need this later for extracting data
+    extra2 = len(coefg) - len(g)
+
+    def obj_fun(coefg, X, k, n, cosg, u0, u, u0K1, u0K2, u0K3, uK1, uK2, uK3, sizep, sizeb):
+
+        #Check if they are in correct python indexing
+
+        b1 = coefg[:sizep]
+        size2 = sizep + 1
+        size3 = sizep * 2
+        size4 = size3 + 1 #b3
+        size5 = sizep * 3 #b3
+        size6 = size5 + 1 #c1
+        size7 = sizep * 4 #c1
+        size8 = size7 + 1 #c2
+        size9 = sizep * 5 #c2
+        size10 = size9 + 1 #c3
+        size11 = sizep * 6 #c3
+        size12 = size11 + 1
+        size13 = size11 + 2
+        size14 = size11 + 3
+        size15 = size11 + 4
+        size16 = size11 + 5
+        size17 = size11 + 6
+        size18 = size11 + 7
+        b2 = coefg[size2:size3]
+        b3 = coefg[size4:size5]
+        c1 = coefg[size6:size7]
+        c2 = coefg[size8:size9]
+        c3 = coefg[size10:size11]
+
+        D1 = coefg[size12]
+        D2 = coefg[size13]
+        D3 = coefg[size14]
+        s1 = coefg[size15]
+        s2 = coefg[size16]
+        s3 = coefg[size17]
+        scale = coefg[size18]
+
+        k = scale * k
+        k = np.repeat(k, 7, axis=0)
+        bs1 = np.repeat(b1, 7, axis=0)
+        bs2 = np.repeat(b2, 7, axis=0)
+        bs3 = np.repeat(b3, 7, axis=0)
+        cs1 = np.repeat(c1, 7, axis=0)
+        cs2 = np.repeat(c2, 7, axis=0)
+        cs3 = np.repeat(c3, 7, axis=0)
+
+        #This program performs an iterative minimization using Hapke's radiative
+        #transfer theory to find the phase function coefficients b and c.
+        #the guts of the Hapke calculation
+
+        sizeb2 = sizeb + 1
+        sizec = 2 * sizeb
+        sizec2 = sizec + 1
+        sized = 3 * sizeb
+        
+        #CALCULATIONS ARE PERFORMED BY GRAIN SIZE
+        #That means that each set of 7 phase angle spectra are in a row and those
+        #three rows are end to end by grain size. Here they get separated.
+        #Currently, the phase function coefficients are not grain size dependent
+        #but they could be altered pretty easily to be so 
+
+        
+        Pg1 = 1 + bs1 * cosg + cs1 * (1.5 * (cosg**2) - 0.5)
+        Pg2 = 1 + bs2 * cosg + cs2 * (1.5 * (cosg**2) - 0.5)
+        Pg3 = 1 + bs3 * cosg + cs3 * (1.5 * (cosg**2) - 0.5)
+
+        #initial alpha and k
+        Alpha = ((4*pi) *k ) / X
+        #internal transmission factor
+        ri1 = (1 - sqrt(Alpha / (Alpha + s1))) / (1 + sqrt(Alpha / (Alpha + s1)))
+        ri2 = (1 - sqrt(Alpha / (Alpha + s2))) / (1 + sqrt(Alpha / (Alpha + s2)))
+        ri3 = (1 - sqrt(Alpha / (Alpha + s3))) / (1 + sqrt(Alpha / (Alpha + s3)))
+        THETA1 = (ri1+exp(-sqrt(Alpha*(Alpha+s1))*D1))/(1+ri1*exp(-sqrt(Alpha*(Alpha+s1))*D1));
+        THETA2 = (ri2+exp(-sqrt(Alpha*(Alpha+s2))*D2))/(1+ri2*exp(-sqrt(Alpha*(Alpha+s2))*D2));
+        THETA3 = (ri3+exp(-sqrt(Alpha*(Alpha+s3))*D3))/(1+ri3*exp(-sqrt(Alpha*(Alpha+s3))*D3));
+        #approximate surface reflection coefficient S_E
+        Se=((n-1)**2+k**2)/((n+1)**2+k**2)+0.05
+        #approximate internal scattering coefficient S_I
+        Si=1.014-4/(n*((n+1)**2));
+        #single scattering albedo
+        SSA1=Se+(1-Se)*(((1-Si)*THETA1)/(1-Si*THETA1))
+        SSA2=Se+(1-Se)*(((1-Si)*THETA2)/(1-Si*THETA2))
+        SSA3=Se+(1-Se)*(((1-Si)*THETA3)/(1-Si*THETA3))
+        #H function
+        gamma1=sqrt(1-SSA1)
+        gamma2=sqrt(1-SSA2)
+        gamma3=sqrt(1-SSA3)
+        r01=(1-gamma1)/(1+gamma1)
+        r02=(1-gamma2)/(1+gamma2)
+        r03=(1-gamma3)/(1+gamma3)
+        Hu01=(1-(1-gamma1)*u0K1*(r01+(1-0.5*r01-r01*u0K1)*log((1+u0K1)/u0K1)))**-1
+        Hu02=(1-(1-gamma2)*u0K2*(r02+(1-0.5*r02-r02*u0K2)*log((1+u0K2)/u0K2)))**-1
+        Hu03=(1-(1-gamma3)*u0K3*(r03+(1-0.5*r03-r03*u0K3)*log((1+u0K3)/u0K3)))**-1
+        Hu1=(1-(1-gamma1)*uK1*(r01+(1-0.5*r01-r01*uK1)*log((1+uK1)/uK1)))**-1
+        Hu2=(1-(1-gamma2)*uK2*(r02+(1-0.5*r02-r02*uK2)*log((1+uK2)/uK2)))**-1
+        Hu3=(1-(1-gamma3)*uK3*(r03+(1-0.5*r03-r03*uK3)*log((1+uK3)/uK3)))**-1
+        #isometric spectralon standard
+        rc1=((SSA1/(4))*(1/(u+u0))*((Pg1)+(Hu01*Hu1)-1))
+        rc2=((SSA2/(4))*(1/(u+u0))*((Pg2)+(Hu02*Hu2)-1))
+        rc3=((SSA3/(4))*(1/(u+u0))*((Pg3)+(Hu03*Hu3)-1))
+    
+
+    solutions = []
+    #For each start point - minimize the least square error and append it to solutions.
+    for p in spts:
+        #Not sure how to use maxit
+        res = least_squares(obj_fn, p, ftol=funtol, xtol= xtol,x_scale = 'jac', method='trf', max_nfev=maxfun)
+        solutions.append(res)
+    return solutions
