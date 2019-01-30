@@ -444,7 +444,7 @@ def adj_method_1(cache):
 def adj_method_2(cache):
     plt_data = []
     (v, k, lam, vnirk, vnirv, rev_vnirk, rev_vnirv, even_vnirk, even_vnirv, new_vnirk, new_vnirv, vnirv_end, v_end, vdiff, vnirvdiff) = cache
-    if v_end < vnirv_end:
+    if v_end > vnirv_end:
         new_end = v_end # - vnirvdiff -- taking this out leads to a double point later
         #Fit the end of the data so that it will meet the MIR data
         ## Requires different functions sometimes, try POLY3, POLY4
@@ -483,7 +483,7 @@ def adj_method_2(cache):
         
         #combine fit end with data (for this step only)
         fvnirk=np.concatenate((new_vnirk,extrak), axis=None)
-        fv=np.concatenate((new_vnirv,vnirv_end), axis=None)
+        fv=np.concatenate((new_vnirv,vnirvext), axis=None)
     else:
         fvnirk=new_vnirk # oveflap dealt with in next section for this method
         fv=new_vnirv; 
@@ -520,8 +520,8 @@ def adj_method_2(cache):
         ax2.invert_xaxis()
         plt_data.append(['Adjusted MIR k', nv, adjk])
 
-        fullv = np.concatenate((nv,fv), axis=None)
-        fullk = np.concatenate((adjk,fvnirk), axis=None)
+        fullv = np.concatenate((fv,nv), axis=None)
+        fullk = np.concatenate((fvnirk, adjk), axis=None)
     
         fig3, ax3 = plt.subplots(figsize=(6, 4), frameon=False)
         ax3.semilogy(fullv, fullk, label='Combined k')
@@ -690,7 +690,7 @@ def MasterSSKK(kset, anchor, iter, wavelength, n1, lstart, lend):
     halfv = dv/2;
     offset = np.linspace(-halfv, halfv, intnb) #10 evenly spaced steps in every dv
     xx = np.matlib.repmat(v, intnb, 1) + np.matlib.repmat(offset, sizev, 1).T
-    #xx is ten rows to comput simultaneously, 1 for each offset for each v
+    #xx is ten rows to comput simultaneously, 1 for     each offset for each v
 
     # compute all the bits that don't change in the loop.
     v_sq = v**2
