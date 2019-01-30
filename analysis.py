@@ -64,7 +64,7 @@ def preprocess_traj(traj, low, high, UV, fit_order=0):
   return fit_left_side(wave, spec, UV, fit_order=fit_order)
 
 #Solving for K - Logic -- setup the matrices here. For plotting get values from the hapke object - defined in hapke_model.py
-def MasterHapke1_PP(hapke, traj, b, c, ff, s, D, debug_plots=False):
+def MasterHapke1_PP(hapke, traj, b, c, ff, s, D, key, debug_plots=False):
   wavelength, reflect = traj.T
   table_size = len(traj) * 2
 
@@ -93,8 +93,9 @@ def MasterHapke1_PP(hapke, traj, b, c, ff, s, D, debug_plots=False):
     rc3 = hapke.radiance_coeff(ScatAlb, b, c, ff)
 
     #The _ is the figure and the axes object is stores in axes
-    _, axes = plt.subplots(figsize=(10,4), nrows=2, ncols=2, sharex=True)
+    fig, axes = plt.subplots(figsize=(10,4), nrows=2, ncols=2, sharex=True)
     # plot reflectance data and rc2 for comparison
+    fig.suptitle('Graphs for %s' % key)
     ax = axes[0,0] #Position of the plots
     ax.plot(wavelength, reflect)
     ax.plot(wavelength, rc2, '--')# Third argument is for dotted lines

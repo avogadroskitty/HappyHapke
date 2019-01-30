@@ -98,5 +98,17 @@ details.details_shim_open > summary:before {
 /*****************************/
 
 /*** CSS added by Aish ****/
-#lnkAddMore{color:#4286f4; text-decoration: none; cursor: pointer; transition-duration: 0.3s}
-#lnkAddMore:hover{color: #1d50a3; text-decoration: underline; transition-duration: 0.3s}
+#lnkAddMore, #lnkAddMorePhase {
+    color: #4286f4;
+    text-decoration: none;
+    cursor: pointer;
+    transition-duration: 0.3s
+}
+    #lnkAddMore:hover, #lnkAddMorePhase :hover{
+        color: #1d50a3;
+        text-decoration: underline;
+        transition-duration: 0.3s
+    }
+#addFilesPhase div {
+    border: 1px solid; margin:0.5em; padding:0.3em;
+}

@@ -96,6 +96,32 @@ class ProgramState(object):
     #pp is the parameter used for identifying the download data.
     return 'Preprocessing complete: ', 'pp', [fig]
 
+  def solve_for_all_k(self, **kwargs):
+    for i, key in enumerate(self.pp_spectra):
+        for k,v in kwargs.items():
+            if key in k.lower():
+                if 'b' in k:
+                    b = v
+                elif 'c' in k:
+                    c = v
+                elif 's' in k:
+                    s = v
+                elif 'ff' in k:
+                    ff = v
+                elif 'D' in k:
+                    D = v
+        b, c, s, D, ff = map(float, (b, c, s, D, ff))
+        self.guesses[key] = b, c, s, D, ff 
+        traj = self.pp_spectra[key]
+        #The hidden treasure where all the brains are hidden
+        solved_k, scat_eff = analysis.MasterHapke1_PP(
+            self.hapke_scalar, traj, b, c, ff, s, D, key, debug_plots=True)
+
+        self.ks[key] = solved_k
+        self.scat_eff_grain[key] = scat_eff
+    
+    figures = [plt.figure(i) for i in plt.get_fignums()]
+    return 'Solved for k: ', 'guessk', figures
   #Section Two by Default, Section Three and Four - Matlab Code
   def solve_for_k(self, key='file2', b=0, c=0, ff=0.000000001, s=0, D=0):
     b, c, s, D, ff = map(float, (b, c, s, D, ff))
@@ -111,9 +137,7 @@ class ProgramState(object):
     figures = [plt.figure(i) for i in plt.get_fignums()]
     return 'Solved for k: ', 'sk-' + key, figures
 
-  def optimize_global_k(self, guess_key='file2', opt_strategy='slow',lowbfile1=0, lowbfile2=0, lowbfile3=0, upbfile1=0, upbfile2=0, upbfile3=0,
-                       lowcfile1=0, lowcfile2=0, lowcfile3=0, upcfile1=0, upcfile2=0, upcfile3=0, lowsfile1=0, lowsfile2=0, lowsfile3=0,
-                      upsfile1=0, upsfile2=0, upsfile3=0,lowDfile1=0, lowDfile2=0, lowDfile3=0, upDfile1=0, upDfile2=0, upDfile3=0,lowk=0, upk=0, num_solns=1, **kwargs):
+  def optimize_global_k(self, guess_key='file2', opt_strategy='slow',lowk=0, upk=0, num_solns=1, **kwargs):
     #The previous step only approximates for a single grain size
     #Should we have guesses for all grain samples or only the ones we have approximated for?
     no_of_grain_samples = len(self.spectra)
@@ -145,33 +169,16 @@ class ProgramState(object):
     guesses[total_guesses:] = k #Filling the rest of the array with the value of K
     # set up bounds
     lb = np.empty_like(guesses)
-    #Values that will be there regardless if additional grain sizes are uploaded
-    lb[:12] = [lowbfile1, lowbfile2, lowbfile3, lowcfile1, lowcfile2, lowcfile3, lowsfile1, lowsfile2, lowsfile3,
-    lowDfile1, lowDfile2, lowDfile3]
+    ub = np.empty_like(guesses)
 
-    temp_low_bound = []
-    temp_up_bound=[]
-    for grain in self.spectra.keys():
-      if grain not in ['file1', 'file2', 'file3']:
-        temp_low_bound.append(kwargs['lowb'+grain])
-        temp_low_bound.append(kwargs['lowc'+grain])
-        temp_low_bound.append(kwargs['lows'+grain])
-        temp_low_bound.append(kwargs['lowD'+grain])
-
-        temp_up_bound.append(kwargs['upb'+grain])
-        temp_up_bound.append(kwargs['upc'+grain])
-        temp_up_bound.append(kwargs['ups'+grain])
-        temp_up_bound.append(kwargs['upD'+grain])
-
-    lb[12:total_guesses] = temp_low_bound
+    for i,grain in enumerate(sorted(self.spectra.keys())):
+        lb[i:total_guesses:no_of_grain_samples] = (kwargs['lowb'+grain], kwargs['lowc'+grain], kwargs['lows'+grain], kwargs['lowD'+grain])
+        ub[i:total_guesses:no_of_grain_samples] = (kwargs['upb'+grain], kwargs['upc'+grain], kwargs['ups'+grain], kwargs['upD'+grain])
+        
     #Filling in rest of the values
     lb[total_guesses:] = lowk
-
-    ub = np.empty_like(guesses)
-    ub[:12] = [upbfile1, upbfile2, upbfile3, upcfile1, upcfile2, upcfile3, upsfile1, upsfile2, upsfile3,
-    upDfile1, upDfile2, upDfile3]
-    ub[12:total_guesses] = temp_up_bound
     ub[total_guesses:] = upk
+
     self.bounds = (lb, ub)
 
     # solve
@@ -221,7 +228,6 @@ class ProgramState(object):
     fig2, (ax1, ax2) = plt.subplots(figsize=(9,4), ncols=2, sharex=True,
                                     frameon=False)
     best_soln = solns[-1]
-    line_colors = ['b', 'g', 'r']  # ['C0', 'C1', 'C3']
     for i, key in enumerate(sorted(self.spectra.keys())):
       wave, orig = self.pp_spectra[key].T
       b, c, s, D = best_soln[i:total_guesses:no_of_grain_samples]
@@ -229,14 +235,14 @@ class ProgramState(object):
                                                           D, s)
       rc = self.hapke_vector_isow.radiance_coeff(scat, b, c, ff[i])
 
-      ax1.plot(wave, orig, color=line_colors[i], label=('%s grain' % key))
+      ax1.plot(wave, orig,label=('%s grain' % key))
       ax1.plot(wave, rc, 'k--')
       ax1.set_xlabel('Wavelength (um)')
       ax1.set_ylabel('Reflectance (#)')
       ax1.set_title('Final fit')
       ax1.legend(fontsize='small', loc='best')
 
-      ax2.plot(wave, np.abs(rc - orig), color=line_colors[i], lw=1,
+      ax2.plot(wave, np.abs(rc - orig), lw=1,
                label=('%s fit' % key))
       ax2.set_title('Fit error')
       ax2.set_xlabel('Wavelength (um)')
@@ -296,35 +302,19 @@ class ProgramState(object):
     
     return 'Solved for n: ', 'sskk', figures
 
-  def phase_solver(self, pfile1='', pfile2='', pfile3='', pfile4='', pfile5='', pfile6='', pfile7='',  pfile8='', pfile9='', pfile10='',
+  def phase_solver(self, 
                    maxScale=10, lowb=0, upb=1, lowc=0, upc=1, lows1=0, ups1 = 0.06, lows2=0, ups2=0.06, lows3=0, ups3=0.06, maxfun = 1000000000000000000, spts=30, funtol = 0.00000000000001, xtol= 0.00000000000001, maxit=1000 , 
-                   lowd1=21, upd1=106, lowd2=31, upd2=150, lowd3=50, upd3=180, guess_b=0.4, guess_c=0.8, guess_d1=50, guess_d2=90, guess_d3=140, guess_s1=0.06, guess_s2=0.04, guess_s3=0.02 ):
+                   lowd1=21, upd1=106, lowd2=31, upd2=150, lowd3=50, upd3=180, guess_b=0.4, guess_c=0.8, guess_d1=50, guess_d2=90, guess_d3=140, guess_s1=0.06, guess_s2=0.04, guess_s3=0.02, **kwargs ):
       k = self.ks['global']
 
-      pfile1 = pfile1 or '../data/BytWS63106i30e0.asc' 
-      pfile2 = pfile2 or '../data/BytWM106150i30e0.asc'
-      pfile3 = pfile3 or '../data/BytWB150180i30e0.asc'
-
       #Input: grain size, phase angle
-
-      #Change to include 70 --- yes 70 files : min, 6*3
-      self.phase_file_key_list = ['pfile4','pfile5','pfile6','pfile7', 'pfile8','pfile9','pfile10']
-
       self.phases = {}
-      for key, infile in [('pfile1', pfile1),
-                        ('pfile2', pfile2),
-                        ('pfile3', pfile3),
-                        ('pfile4', pfile4),
-                        ('pfile5', pfile5),
-                        ('pfile6', pfile6),
-                        ('pfile7', pfile7),
-                        ('pfile8', pfile8),
-                        ('pfile9', pfile9),
-                        ('pfile10', pfile10)]:
+      for key in kwargs:
+        if 'file_pfile' in key:
         #Checks if the infile variable has a string -- sanity check if not all ten files are uploaded
         #self.phases has the number of grain files included in the process
-        if not infile == '':
-            self.phases[key] = analysis.loadmat_single(infile) # Shape (N,2)
+        if not kwargs[key] == '':
+            self.phases[key] = analysis.loadmat_single(kwargs[key]) # Shape (N,2)
 
         #This program will use data from multiple viewing geometries to calculate
         #phase function parameters for a sample where k and n for i=30, e=0 is already
@@ -422,6 +412,14 @@ class ProgramState(object):
       fname = 'k_%s.txt' % names[key]
       print_vec = _vec2bytes(self.ks[key])
       return fname, 'text/plain', print_vec
+    elif param == 'guessk':
+        buf = BytesIO()
+        with ZipFile(buf, mode='w') as zf:
+            for key in self.scat_eff_grain.keys():
+                for s_data in self.scat_eff_grain[key]:
+                    file = '%s_%s.txt' % (s_data[0], key)
+                    zf.writestr(file, _plot2bytes(s_data[1], s_data[2]))
+        return 'solved_k_data.zip', 'application/zip', buf.getvalue()
     elif param == 'mirdata':
         buf = BytesIO()
         with ZipFile(buf, mode='w') as zf:
