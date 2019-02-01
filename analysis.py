@@ -766,13 +766,14 @@ def MasterSSKK(kset, anchor, iter, wavelength, n1, lstart, lend):
 def solve_phase(phase_files, params):
     (lstart2, lend2, low, UV, lamdiff, maxScale, lowb, upb, lowc, upc, lows1, ups1, lows2, ups2, lows3, ups3, 
     lowd1, upd1, lowd2, upd2, lowd3, upd3, guess_b, guess_c, guess_d1, guess_d2, guess_d3, guess_s1, guess_s2, guess_s3,
-    maxfun, funtol, xtol, maxit, spts, vislam, visn, wavelength, k) = params
+    maxfun, funtol, xtol, maxit, spts, vislam, visn, wavelength, k, Bg, phaseAngleCount, phaseGrainList) = params
 
-    phase_file_key_list = list(phase_files.keys())
-    nfiles = len(phase_file_key_list)
-    prow, pcol = phase_files['pfile1'].shape
+    phase_file_key_list = range(phaseAngleCount)
+    grain_samples = len(phaseGrainList.keys())
+    nfiles = phaseAngleCount * grain_samples
+    prow, pcol = phaseGrainList[0][0].data.shape
     
-    wave = phase_files['pfile1'][:,0] #Shape (N,2) -- Take only first column
+    wave = phaseGrainList[1][0].data[:,0] #Shape (N,2) -- Take only first column
     eps = 0.01
 
     #find indices of those values in the wavelength vector
@@ -783,12 +784,12 @@ def solve_phase(phase_files, params):
     prow2 = wave.shape[0]
 
     #extract reflectance data over new, smaller range and make it just data
-    full_phase = np.zeros((nfiles, prow, pcol))
-    for i, key in enumerate(phase_file_key_list):
-        full_phase[i, :] = phase_files[key]
+    full_phase = np.zeros((grain_samples, phaseAngleCount, prow, pcol))
+    for g in range(grain_samples):
+        for i, key in enumerate(phaseGrainList[g]):
+            full_phase[g, i, :, :] = phaseGrainList[g][i].data
 
-    phasedata = np.zeros((nfiles, prow2))
-    phasedata = full_phase[:,:,1][lowind:highind]
+    phasedata = np.reshape(full_phase, (nfiles, prow, pcol))[:,:,1][lowind:highind] #phasedata = nfiles, prow2
 
     #extend data into UV based on assumptions
     #extrapolate left side of k to 0.2 using ahrekiel's constant method
@@ -808,22 +809,18 @@ def solve_phase(phase_files, params):
     ep = sp+4;
     shortlam = wave[sp:ep]
     prow3 = shortlam.shape[0]
-
-    feature = np.zeros((nfiles, prow3))
-    feature = phasedata[:, sp:ep]
+    feature = phasedata[:, sp:ep] #feature = nfiles, prow3
      
     #Fit Curve
     fit_order = 2
     fit_coefs_count = fit_order + 1 
-    fcoef = np.zeros((nfiles, fit_coefs_count))
-    fcoef = np.polyfit(shortlam, feature.T, fit_order)
+    fcoef = np.polyfit(shortlam, feature.T, fit_order).T #fcoef = nfiles, fit_coefs_count
 
     UVdata = np.zeros((nfiles, head))
     for i in range(nfiles):
         UVdata[i,:] = evalPoly(fcoef[i], leftw)
        
-    longphasedata = np.zeros((nfiles, head+prow3))
-    longphasedata = np.concatenate((UVdata, phasedata[:,1:]),axis=1)
+    longphasedata = np.concatenate((UVdata, phasedata[:,1:]),axis=1) #longphasedata = nfiles, head+prow3
     wave = np.concatenate((leftw, wave[1:]),axis=0)
 
     v = vislam
@@ -886,16 +883,14 @@ def solve_phase(phase_files, params):
 
     n = np.repeat(n, 7, axis=0)
     
-    #define thetai and thetae (as many angles as sets of angle data)
-    thetai = np.array([-15, -20, -25, -30, -35, -40, -45]) ## Should this be input?? If they are for each of the input files then..... why are there so many
-    thetae = np.array([0, 0, 0, 0, 0, 0, 0])
+    thetai = np.asarray([x.incident_angle for x in phaseGrainList[0]]) ## Should this be input?? If they are for each of the input files then..... why are there so many
+    thetae = np.asarray([x.emission_angle for x in phaseGrainList[0]]) 
 
     thetai = np.repeat(thetai.reshape(len(thetai),1), sizep, axis=1)
     thetae = np.repeat(thetae.reshape(len(thetae),1), sizep, axis=1)
 
     #PERFORM OTHER TIME CONSUMING CALCULATIONS OUT OF LOOP AND FEED THROUGH IN
     #IN ANONYMOUS FUNCTION
-    Bg = 0
     Bgplus1 = Bg + 1
     #Phase angle (g)
     g = math.radians(abs(thetae-thetai))

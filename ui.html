@@ -320,15 +320,11 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
             <section>
                 <div class='param_group'>
                     <p>Phase Files</p>
-                
-                    <div id='addFilesPhase'>
-                        <div>
-                            <select id="ddlpFile1Key" name='vnir_pfile1'></select>
-                            <label><input type='file' class="pfileElement" name='file_pfile1' />VNIR spectrum</label>
-                            <label>Phase Angle: <input name='phaseangle_pfile1' type='number' step='10' value='10' min='0' /></label>
-                        </div>
-                    </div>
-                    <span id='lnkAddMorePhase'> Add More </span>
+                    <label>
+                        Phase Angle Count: <input name='phaseAngleCount' id="phaseAngleCount" type='number' step='1' value='1' min='1' />
+                        <span id="AddPhaseCount" /> Add Phase Angles </span>
+                    </label>
+                    <div id='addFilesPhase'></div>
                 </div>
 
                 <div class='param_group'>
@@ -475,9 +471,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
         var $options;
         $('#preprocess_submit').click(function () {
             console.log('fff');
-            $('#ddlGuessKey').empty();
-            $("#bounds_group").empty();
-            $('#guess_group').empty();
+            $('#ddlGuessKey, #bounds_group, #guess_group, #addFilesPhase').empty();
             $(".fileElement").each(function (index) {
                 
                 grain_lb = 0;
@@ -503,7 +497,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                 if (fileAdded) { 
                     $("#ddlGuessKey").append('<option value="' + elementName + '">' + elementName + '</option>');
 
-                    $('#guess_group').append('<div class="guess_grain_group" style="border: 1px solid;padding: 0.3em;margin: 0.5em;" ><h3 class="param_grain_head" id="guesshead_' + index + '"></h3>' +
+                    $('#guess_group').append('<div class="guess_grain_group" ><h3 class="param_grain_head" id="guesshead_' + index + '"></h3>' +
                         '<label> Coeff. B: <input name = "b_' + elementName +'" type = "number" step = "any" value = "0.1" /></label >' +
                         '<label> Coeff. C: <input name = "c_' + elementName +'" type = "number" step = "any" value = "0.3" /></label >' +
                         '<label> Filling Factor: <input name = "ff_' + elementName +'" type = "number" step = "any" value = "0.000000001" /></label >' +
@@ -532,29 +526,42 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                         '<label>Upper Bounds:<input name="upD' + elementName + '"" type="number" step="any" value="' + grain_ub + '" /></label>' +
                         '</div>' +
                         '</div>');
+
+                    $('#addFilesPhase').append('<div class="pfilesecs" id="pfilesec_'+index+'">' + '<h3 class="param_pfile_head" id="pfile_' + index + '"></h3>');
+
+                    $('#pfile_' + index).text(elementName + ":" + fileAdded);
                     $('#guesshead_' + index).text(elementName + ":" + fileAdded);
                     $('#head_' + index).text(elementName + ":" + fileAdded);
                 }
             });
 
-            //For the last section
-            $options = $("#ddlGuessKey option").clone();
-            $('#ddlpFile1Key').append($options);
+            $('#AddPhaseCount').click(function () {
+                $('.phaseangle').remove();
+                var count = $('#phaseAngleCount').val()
+                for (var i = 0; i < count; i++){
+                $(".fileElement").each(function (index) {
+                    var elementName = $(this).attr('name'); // Holds the fileId for the files added adhoc
+                    var fileAdded = $(this).val().split('\\').pop();
+                    if (fileAdded) {
+                        var selector = 'pfilesec_' + index;
+                        var fileElements = $('#' + selector + ' input.pfileElement');
+                        var id = (fileElements.length);
+                        $('#' + selector).append('<div class="phaseangle">' +
+                            '<label><input type="file" class="pfileElement" name="filepfile_' + index + '_' + id + '"/></label>' +
+                            '<label>Phase Angle (I): <input name="pfile_i_' + index + '_' + id + '" type="number" step="10" value="10" min="0" /></label>' +
+                            '<label>Phase Angle (E): <input name="pfile_e_' + index + '_' + id + '" type="number" step="10" value="10" min="0" /></label>' +
+                            '</div >');
+                    }
+                });
+                }
+            });
+
         }); //Preprocess submit end
 
         //Adding javascript for Section Phase Angle 
         
 
-        $('#lnkAddMorePhase').click(function () {
-            var fileElements = $('#addFilesPhase input.pfileElement');
-            var index = (fileElements.length + 1);
-            $('#addFilesPhase').append('<div>' +
-                '<select id="ddlpFileKey' + index + '" name = "vnir_pfile"' + index + '></select >' +
-                '<label><input type="file" class="pfileElement" name="file_pfile' + index + '"/>VNIR spectrum</label>' +
-                '<label>Phase Angle: <input name="phaseangle_pfile"' + index + ' type="number" step="10" value="10" min="0" /></label>' +
-                '</div >');
-            $('#ddlpFileKey' + index).append($options.clone());
-        });
+        
     </script>
 
 </body>

@@ -29,14 +29,14 @@
     <Compile Include="cli.py" />
     <Compile Include="hapke_model.py" />
     <Compile Include="mplweb.py" />
+    <Compile Include="phaseangle.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="prog_state.py" />
     <Compile Include="rc_demo.py" />
     <Compile Include="rewrite\hapke.py" />
     <Compile Include="rewrite\main.py" />
     <Compile Include="Utilities\DirtyHapke.py" />
-    <Compile Include="scratchpaper.py">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="web.py" />
   </ItemGroup>
   <ItemGroup>

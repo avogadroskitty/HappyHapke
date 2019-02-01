@@ -9,6 +9,7 @@ from matplotlib.ticker import MaxNLocator
 from zipfile import ZipFile
 import analysis
 from hapke_model import get_hapke_model
+from phaseangle import PhaseAngleObj
 
 
 class ProgramState(object):
@@ -25,6 +26,7 @@ class ProgramState(object):
     self.hapke_scalar = HapkeModel(thetai, thetae, float(n1), float(Bg))
 
     self.spectra = {}
+    self.Bg = Bg
     for key in kwargs:
         if 'file' in key:
       #Checks if the infile variable has a string -- sanity check if not all ten files are uploaded
@@ -302,28 +304,33 @@ class ProgramState(object):
     
     return 'Solved for n: ', 'sskk', figures
 
-  def phase_solver(self, 
+  def phase_solver(self, phaseAngleCount,
                    maxScale=10, lowb=0, upb=1, lowc=0, upc=1, lows1=0, ups1 = 0.06, lows2=0, ups2=0.06, lows3=0, ups3=0.06, maxfun = 1000000000000000000, spts=30, funtol = 0.00000000000001, xtol= 0.00000000000001, maxit=1000 , 
                    lowd1=21, upd1=106, lowd2=31, upd2=150, lowd3=50, upd3=180, guess_b=0.4, guess_c=0.8, guess_d1=50, guess_d2=90, guess_d3=140, guess_s1=0.06, guess_s2=0.04, guess_s3=0.02, **kwargs ):
       k = self.ks['global']
 
       #Input: grain size, phase angle
       self.phases = {}
-      for key in kwargs:
-        if 'file_pfile' in key:
-        #Checks if the infile variable has a string -- sanity check if not all ten files are uploaded
-        #self.phases has the number of grain files included in the process
-        if not kwargs[key] == '':
-            self.phases[key] = analysis.loadmat_single(kwargs[key]) # Shape (N,2)
-
-        #This program will use data from multiple viewing geometries to calculate
-        #phase function parameters for a sample where k and n for i=30, e=0 is already
-        #known. 
-        #This program downsamples the data and then uses a
-        #minimization routine to find the best wavelength dependent b and c
-        #coefficients for the phase function by minimizing the difference between
-        #the calculated and observed data for multiple viewing geometries and
-        #multiple grain sizes simultaneously.
+      #Total no of grain sizes == no of pp_spectras
+      no_grain_sizes = len(self.pp_spectra.keys())
+      phaseGrainList = {}
+      for i in range(no_grain_sizes):
+          phaseGrainList[i] = []
+          for j in range(int(phaseAngleCount)):
+              id = '_%s_%s' % (i,j)
+              data = analysis.loadmat_single(kwargs['filepfile'+id])
+              phaseAngle = PhaseAngleObj(i, kwargs['pfile_i'+id], kwargs['pfile_e'+id], data)
+              phaseGrainList[i].append(phaseAngle)
+          phaseGrainList[i].sort(key=lambda x: x.incident_angle)
+      
+    #This program will use data from multiple viewing geometries to calculate
+    #phase function parameters for a sample where k and n for i=30, e=0 is already
+    #known. 
+    #This program downsamples the data and then uses a
+    #minimization routine to find the best wavelength dependent b and c
+    #coefficients for the phase function by minimizing the difference between
+    #the calculated and observed data for multiple viewing geometries and
+    #multiple grain sizes simultaneously.
 
       lstart2 = self.sskk_lstart
       lend2 = self.sskk_lend
@@ -333,7 +340,7 @@ class ProgramState(object):
       wavelength = self.pp_spectra['file2'][:,0] 
       params = (lstart2, lend2, low, UV, lamdiff, maxScale, lowb, upb, lowc, upc, lows1, ups1, lows2, ups2, lows3, ups3, 
                    lowd1, upd1, lowd2, upd2, lowd3, upd3, guess_b, guess_c, guess_d1, guess_d2, guess_d3, guess_s1, guess_s2, guess_s3, 
-                   maxfun, funtol, xtol, maxit, spts, vislam, visn, wavelength, k)
+                   maxfun, funtol, xtol, maxit, spts, vislam, visn, wavelength, k, int(self.Bg),  int(phaseAngleCount), phaseGrainList)
 
       pltdata, vars = analysis.solve_phase(self.phases, params)
 
