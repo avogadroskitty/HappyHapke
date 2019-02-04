@@ -766,7 +766,7 @@ def MasterSSKK(kset, anchor, iter, wavelength, n1, lstart, lend):
 def solve_phase(phase_files, params):
     (lstart2, lend2, low, UV, lamdiff, maxScale, lowb, upb, lowc, upc, lows1, ups1, lows2, ups2, lows3, ups3, 
     lowd1, upd1, lowd2, upd2, lowd3, upd3, guess_b, guess_c, guess_d1, guess_d2, guess_d3, guess_s1, guess_s2, guess_s3,
-    maxfun, funtol, xtol, maxit, spts, vislam, visn, wavelength, k, Bg, phaseAngleCount, phaseGrainList) = params
+    maxfun, funtol, xtol, maxit, spts, vislam, visn, wavelength, k, fit_order, Bg, phaseAngleCount, phaseGrainList) = params
 
     phase_file_key_list = range(phaseAngleCount)
     grain_samples = len(phaseGrainList.keys())
@@ -774,7 +774,7 @@ def solve_phase(phase_files, params):
     prow, pcol = phaseGrainList[0][0].data.shape
     
     wave = phaseGrainList[1][0].data[:,0] #Shape (N,2) -- Take only first column
-    eps = 0.01
+    eps = np.finfo(float).eps
 
     #find indices of those values in the wavelength vector
     #recreate the wavelength vector
@@ -806,19 +806,18 @@ def solve_phase(phase_files, params):
     #upper end of fittable range or feature
     sp = 1
     #change ep to end of useable feature (index not wavelength)
-    ep = sp+4;
+    ep = sp+5;
     shortlam = wave[sp:ep]
     prow3 = shortlam.shape[0]
     feature = phasedata[:, sp:ep] #feature = nfiles, prow3
      
     #Fit Curve
-    fit_order = 2
     fit_coefs_count = fit_order + 1 
     fcoef = np.polyfit(shortlam, feature.T, fit_order).T #fcoef = nfiles, fit_coefs_count
 
     UVdata = np.zeros((nfiles, head))
     for i in range(nfiles):
-        UVdata[i,:] = evalPoly(fcoef[i], leftw)
+        UVdata[i,:] = evalPoly(fcoef[i][::-1], leftw)
        
     longphasedata = np.concatenate((UVdata, phasedata[:,1:]),axis=1) #longphasedata = nfiles, head+prow3
     wave = np.concatenate((leftw, wave[1:]),axis=0)
@@ -833,7 +832,7 @@ def solve_phase(phase_files, params):
         indexoff = round(offset/lamdiff)
         newstart = indexoff + 1
         kwave = kwave[newstart:]
-        k = k[newstart:end]
+        k = k[newstart:]
 
     #make sure the phase arrays are all the same length as n and k
     #fix start point
@@ -841,19 +840,19 @@ def solve_phase(phase_files, params):
         offset = kwave[0] - wave[0]
         indexoff = round(offset/lamdiff)
         newstart = indexoff + 1
-        wave = wave[newstart:end]
+        wave = wave[newstart:]
         longphasedata = longphasedata[:,newstart:]
 
     #fix end point
     if kwave[-1] < wave[-1]:
-        newend = len(kwave)
+        newend = len(kwave)+1
         wave = wave[:newend]
         longphasedata = longphasedata[:, :newend]
     
     sizep=len(wave)
     
     #Will have 7 columns
-    X = np.repeat(wave[:, np.newaxis], 7, axis=1)
+    X = np.repeat(wave[:, np.newaxis], phaseAngleCount, axis=1)
     
     #create coefficient array - this is what the program is solving for
     #lower limit for b
@@ -881,25 +880,25 @@ def solve_phase(phase_files, params):
     #initial guess array
     coefg=np.array([b1,b2,b3,c1,c2,c3,guess_d1,guess_d2,guess_d3,guess_s1,guess_s2,guess_s3,scale])
 
-    n = np.repeat(n, 7, axis=0)
+    n = np.repeat(n, phaseAngleCount, axis=0)
     
     thetai = np.asarray([x.incident_angle for x in phaseGrainList[0]]) ## Should this be input?? If they are for each of the input files then..... why are there so many
     thetae = np.asarray([x.emission_angle for x in phaseGrainList[0]]) 
 
-    thetai = np.repeat(thetai.reshape(len(thetai),1), sizep, axis=1)
-    thetae = np.repeat(thetae.reshape(len(thetae),1), sizep, axis=1)
+    thetai = np.repeat(thetai.reshape(len(thetai)*grain_samples,1), sizep, axis=1)
+    thetae = np.repeat(thetae.reshape(len(thetae)*grain_samples,1), sizep, axis=1)
 
     #PERFORM OTHER TIME CONSUMING CALCULATIONS OUT OF LOOP AND FEED THROUGH IN
     #IN ANONYMOUS FUNCTION
     Bgplus1 = Bg + 1
     #Phase angle (g)
-    g = math.radians(abs(thetae-thetai))
+    g = np.radians(abs(thetae-thetai))
     #cos(g)
-    cosg = cos(g)
+    cosg = np.cos(g)
     #u_0
-    u0 = cos(math.radians(thetai))
+    u0 = np.cos(np.radians(thetai))
     #u
-    u = cos(math.radians(thetae))
+    u = np.cos(np.radians(thetae))
 
     PoreK1 = PoreK2 = PoreK3 = 0
     u0K1 = u0K2 = u0K3 = u0

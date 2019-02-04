@@ -10,7 +10,7 @@ from zipfile import ZipFile
 import analysis
 from hapke_model import get_hapke_model
 from phaseangle import PhaseAngleObj
-
+import pickle
 
 class ProgramState(object):
   def initialize(self, phase_fn='legendre', scatter_type='lambertian',
@@ -304,7 +304,7 @@ class ProgramState(object):
     
     return 'Solved for n: ', 'sskk', figures
 
-  def phase_solver(self, phaseAngleCount,
+  def phase_solver(self, phaseAngleCount, fit_order,
                    maxScale=10, lowb=0, upb=1, lowc=0, upc=1, lows1=0, ups1 = 0.06, lows2=0, ups2=0.06, lows3=0, ups3=0.06, maxfun = 1000000000000000000, spts=30, funtol = 0.00000000000001, xtol= 0.00000000000001, maxit=1000 , 
                    lowd1=21, upd1=106, lowd2=31, upd2=150, lowd3=50, upd3=180, guess_b=0.4, guess_c=0.8, guess_d1=50, guess_d2=90, guess_d3=140, guess_s1=0.06, guess_s2=0.04, guess_s3=0.02, **kwargs ):
       k = self.ks['global']
@@ -334,13 +334,13 @@ class ProgramState(object):
 
       lstart2 = self.sskk_lstart
       lend2 = self.sskk_lend
-      lamdiff = self.sskk_lamdiff
+      lamdiff = self.sskk_lamdiff 
       low, high, UV = self.pp_bounds
       vislam, visn = self.vislam, self.visn
       wavelength = self.pp_spectra['file2'][:,0] 
       params = (lstart2, lend2, low, UV, lamdiff, maxScale, lowb, upb, lowc, upc, lows1, ups1, lows2, ups2, lows3, ups3, 
                    lowd1, upd1, lowd2, upd2, lowd3, upd3, guess_b, guess_c, guess_d1, guess_d2, guess_d3, guess_s1, guess_s2, guess_s3, 
-                   maxfun, funtol, xtol, maxit, spts, vislam, visn, wavelength, k, int(self.Bg),  int(phaseAngleCount), phaseGrainList)
+                   maxfun, funtol, xtol, maxit, spts, vislam, visn, wavelength, k, fit_order, int(self.Bg),  int(phaseAngleCount), phaseGrainList)
 
       pltdata, vars = analysis.solve_phase(self.phases, params)
 

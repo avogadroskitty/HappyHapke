@@ -328,7 +328,6 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                 </div>
 
                 <div class='param_group'>
-
                     <label>
                         Max Scale: <input name='maxScale' type='number' step='1' value='10' min='10' />
                     </label>
@@ -456,6 +455,11 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                                     Start Points: <input name='spts' type='number' step='1' value='30' />
                                 </label>
                             </div>
+                            <div>
+                                <label>
+                                    Fit Order: <input name='fit_order' type='number' step='1' value='1' />
+                                </label>
+                            </div>
                         </div>
 
                     </div>
@@ -548,8 +552,8 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                         var id = (fileElements.length);
                         $('#' + selector).append('<div class="phaseangle">' +
                             '<label><input type="file" class="pfileElement" name="filepfile_' + index + '_' + id + '"/></label>' +
-                            '<label>Phase Angle (I): <input name="pfile_i_' + index + '_' + id + '" type="number" step="10" value="10" min="0" /></label>' +
-                            '<label>Phase Angle (E): <input name="pfile_e_' + index + '_' + id + '" type="number" step="10" value="10" min="0" /></label>' +
+                            '<label>Phase Angle (I): <input name="pfile_i_' + index + '_' + id + '" type="number" step="10" value="10" /></label>' +
+                            '<label>Phase Angle (E): <input name="pfile_e_' + index + '_' + id + '" type="number" step="10" value="10" /></label>' +
                             '</div >');
                     }
                 });
