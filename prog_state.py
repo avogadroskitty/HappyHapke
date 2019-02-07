@@ -304,9 +304,8 @@ class ProgramState(object):
     
     return 'Solved for n: ', 'sskk', figures
 
-  def phase_solver(self, phaseAngleCount, fit_order,
-                   maxScale=10, lowb=0, upb=1, lowc=0, upc=1, lows1=0, ups1 = 0.06, lows2=0, ups2=0.06, lows3=0, ups3=0.06, maxfun = 1000000000000000000, spts=30, funtol = 0.00000000000001, xtol= 0.00000000000001, maxit=1000 , 
-                   lowd1=21, upd1=106, lowd2=31, upd2=150, lowd3=50, upd3=180, guess_b=0.4, guess_c=0.8, guess_d1=50, guess_d2=90, guess_d3=140, guess_s1=0.06, guess_s2=0.04, guess_s3=0.02, **kwargs ):
+  def phase_solver(self, phaseAngleCount, fit_order, maxOffset = 0, maxScale=10, maxfun = 1000000000000000000, 
+                   spts=30, funtol = 0.00000000000001, xtol= 0.00000000000001, maxit=1000 , **kwargs ):
       k = self.ks['global']
 
       #Input: grain size, phase angle
@@ -314,8 +313,14 @@ class ProgramState(object):
       #Total no of grain sizes == no of pp_spectras
       no_grain_sizes = len(self.pp_spectra.keys())
       phaseGrainList = {}
+      phase_bcsd = {}
       for i in range(no_grain_sizes):
           phaseGrainList[i] = []
+          bcsd = kwargs['p_b_'+i], kwargs['p_c_'+i], kwargs['p_s_'+i], kwargs['p_d_'+i]
+          lb_bcsd = kwargs['plb_b_'+i], kwargs['plb_c_'+i], kwargs['plb_s_'+i], kwargs['plb_d_'+i]              
+          ub_bcsd = kwargs['pub_b_'+i], kwargs['pub_c_'+i], kwargs['pub_s_'+i], kwargs['pub_d_'+i]
+
+          phase_bcsd[i] = bcsd, lb_bcsd, ub_bcsd
           for j in range(int(phaseAngleCount)):
               id = '_%s_%s' % (i,j)
               data = analysis.loadmat_single(kwargs['filepfile'+id])
@@ -338,9 +343,8 @@ class ProgramState(object):
       low, high, UV = self.pp_bounds
       vislam, visn = self.vislam, self.visn
       wavelength = self.pp_spectra['file2'][:,0] 
-      params = (lstart2, lend2, low, UV, lamdiff, maxScale, lowb, upb, lowc, upc, lows1, ups1, lows2, ups2, lows3, ups3, 
-                   lowd1, upd1, lowd2, upd2, lowd3, upd3, guess_b, guess_c, guess_d1, guess_d2, guess_d3, guess_s1, guess_s2, guess_s3, 
-                   maxfun, funtol, xtol, maxit, spts, vislam, visn, wavelength, k, fit_order, int(self.Bg),  int(phaseAngleCount), phaseGrainList)
+      params = (lstart2, lend2, low, UV, lamdiff, maxScale, maxOffset, maxfun, funtol, xtol, maxit, spts, 
+                vislam, visn, wavelength, k, int(fit_order), int(self.Bg),  int(phaseAngleCount), phaseGrainList, phase_bcsd)
 
       pltdata, vars = analysis.solve_phase(self.phases, params)
 

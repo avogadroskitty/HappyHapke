@@ -43,6 +43,7 @@ class _BaseHapke(object):
     self.u0 = np.cos(thetai)
     self.u = np.cos(thetae)
 
+    # np.asarray can handle both scalars and arrays - it will not rearray an array in a wierd way
   def _init_refraction(self, n):
     self.n = n = np.asarray(n)
     numer = (n - 1) ** 2
@@ -63,7 +64,11 @@ class _BaseHapke(object):
       model.Bg1 = opposition_surge + 1
     return model
 
-  def scattering_efficiency(self, k, wave, D, s):
+  def scattering_efficiency(self, k, wave, D, s, n, thetai, thetae):
+    
+    self._init_angles(thetai, thetae)
+    self._init_refraction(n)
+
     Alpha = (4 * np.pi * k) / wave
     Alpha_s = Alpha + s
     tmp = np.sqrt(Alpha/(Alpha_s))

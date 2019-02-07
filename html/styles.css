@@ -125,3 +125,15 @@ details.details_shim_open > summary:before {
     padding:0.5em;
     display:initial !important;
 }
+
+.pggdiv {
+    margin:0.4em;
+}
+
+.pggdiv label {
+    display: grid;
+}
+
+.pgg_p {
+    width:max-content
+}

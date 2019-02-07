@@ -326,106 +326,14 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                     </label>
                     <div id='addFilesPhase'></div>
                 </div>
-
                 <div class='param_group'>
                     <label>
                         Max Scale: <input name='maxScale' type='number' step='1' value='10' min='10' />
                     </label>
 
-                    <div>
-                        <label>
-                            Low B: <input name='lowb' type='number' step='1' value='0' />
-                        </label>
-                        <label>
-                            Up B: <input name='upb' type='number' step='1' value='1' />
-                        </label>
-                    </div>
-
-                    <div>
-                        <label>
-                            Low C: <input name='lowc' type='number' step='1' value='0' />
-                        </label>
-                        <label>
-                            Up C: <input name='upc' type='number' step='1' value='1' />
-                        </label>
-                    </div>
-
-                    <div>
-                        <label>
-                            Low S1: <input name='lows1' type='number' step='1' value='0' />
-                        </label>
-                        <label>
-                            Up S1: <input name='ups1' type='number' step='1' value='0.06' />
-                        </label>
-                        <label>
-                            Low S2: <input name='lows2' type='number' step='1' value='0' />
-                        </label>
-                        <label>
-                            Up S2: <input name='ups2' type='number' step='1' value='0.06' />
-                        </label>
-                        <label>
-                            Low S3: <input name='lows3' type='number' step='1' value='0' />
-                        </label>
-                        <label>
-                            Up S3: <input name='ups3' type='number' step='1' value='0.06' />
-                        </label>
-                    </div>
-
-                    <div>
-                        <label>
-                            Low D1: <input name='lowd1' type='number' step='1' value='21' />
-                        </label>
-                        <label>
-                            Up D1: <input name='upd1' type='number' step='1' value='106' />
-                        </label>
-                        <label>
-                            Low D2: <input name='lowd2' type='number' step='1' value='35' />
-                        </label>
-                        <label>
-                            Up D2: <input name='upd2' type='number' step='1' value='150' />
-                        </label>
-                        <label>
-                            Low D3: <input name='lowd3' type='number' step='1' value='50' />
-                        </label>
-                        <label>
-                            Up D3: <input name='upd3' type='number' step='1' value='180' />
-                        </label>
-                    </div>
-                </div>
-                <div class='param_group'>
-                    <p> INITIAL GUESSES </p>
-
                     <label>
-                        Starting B: <input name='guess_b' type='number' step='1' value='0.4' />
+                        Max Offset: <input name='maxOffset' type='number' step='1' value='10' min='10' />
                     </label>
-
-                    <label>
-                        Starting C: <input name='guess_c' type='number' step='1' value='0.8' />
-                    </label>
-
-                    <div>
-                        <label>
-                            Starting S1: <input name='guess_s1' type='number' step='1' value='0.06' />
-                        </label>
-                        <label>
-                            Starting S2: <input name='guess_s2' type='number' step='1' value='0.04' />
-                        </label>
-                        <label>
-                            Starting S3: <input name='guess_s3' type='number' step='1' value='0.02' />
-                        </label>
-                    </div>
-
-                    <div>
-                        <label>
-                            Starting D1: <input name='guess_d1' type='number' step='1' value='21' />
-                        </label>
-                        <label>
-                            Starting D2: <input name='guess_d2' type='number' step='1' value='90' />
-                        </label>
-                        <label>
-                            Starting D3: <input name='guess_d3' type='number' step='1' value='140' />
-                        </label>
-                    </div>
 
                     <div>
                         <p> MINIMIZATION PARAMETERS</p>
@@ -463,7 +371,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                         </div>
 
                     </div>
-            </section>
+</section>
 
             <input name='section' type='hidden' value='phase_solver' />
             <input type='submit' value='Run' disabled />
@@ -474,7 +382,6 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
     <script>
         var $options;
         $('#preprocess_submit').click(function () {
-            console.log('fff');
             $('#ddlGuessKey, #bounds_group, #guess_group, #addFilesPhase').empty();
             $(".fileElement").each(function (index) {
                 
@@ -531,7 +438,33 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                         '</div>' +
                         '</div>');
 
-                    $('#addFilesPhase').append('<div class="pfilesecs" id="pfilesec_'+index+'">' + '<h3 class="param_pfile_head" id="pfile_' + index + '"></h3>');
+                    $('#addFilesPhase').append('<div class="pfilesecs" id="pfilesec_' + index + '">' + '<h3 class="param_pfile_head" id="pfile_' + index + '"></h3>' +
+                        '<span class="p_grain_group" style="display:flex">' +
+                        '<div class="pggdiv">' +
+                        '<p class="pgg_p">Coeff. B:</p>' +
+                        '<label>Lower Bounds:</label><input name="plb_b_' + index + '"" type="number" step="any" value="-1.7" />' +
+                        '<label>Upper Bounds:</label><input name="pub_b_' + index + '"" type="number" step="any" value="1.7" />' +
+                        '<label>Guess:</label ><input name = "p_b_' + index + '" type = "number" step = "any" value = "0.1" />' +
+                        '</div>' +
+                        '<div class="pggdiv">' +
+                        '<p class="pgg_p">Coeff C:</p>' + 
+                        '<label>Lower Bounds:</label><input name="plb_c_' + index + '"" type="number" step="any" value="-1.0" />' +
+                        '<label>Upper Bounds:</label><input name="pub_c_' + index + '"" type="number" step="any" value="1.0" />' +
+                        '<label>Guess:</label ><input name = "p_c_' + index + '" type = "number" step = "any" value = "0.3" />' +
+                        '</div>' +
+                        '<div class="pggdiv">' +
+                        '<p class="pgg_p">Scat. S:</p>' +
+                        '<label>Lower Bounds:</label><input name="plb_s_' + index + '"" type="number" step="any" value="0" />' +
+                        '<label>Upper Bounds:<input name="pub_s_' + index + '"" type="number" step="any" value="0.06" />' +
+                        '<label>Guess:</label><input name = "p_s_' + index + '" type = "number" step = "any" value = "0" />' +
+                        '</div>' +
+                        '<div class="pggdiv">' +
+                        '<p class="pgg_p">Grain Size:</p>' +
+                        '<label>Lower Bounds:</label><input name="plb_d_' + index + '"" type="number" step="any" value="' + grain_lb + '" />' +
+                        '<label>Upper Bounds:</label><input name="pub_d_' + index + '"" type="number" step="any" value="' + grain_ub + '" />' +
+                        '<label>Guess:</label><input name = "p_d_' + index + '" type = "number" step = "any" value = "63" />' +
+                        '</div>' +
+                        '</span>');
 
                     $('#pfile_' + index).text(elementName + ":" + fileAdded);
                     $('#guesshead_' + index).text(elementName + ":" + fileAdded);

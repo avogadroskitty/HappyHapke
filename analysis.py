@@ -681,7 +681,7 @@ def MasterSSKK(kset, anchor, iter, wavelength, n1, lstart, lend):
 
     # intnb : specifies the number of intervals to run approximation over
     # (originally 1000, but that seemed excessive)
-    intnb=10
+    intnb=1
 
     #make start point and end point values for integration that place k at the
     #center of each range
@@ -764,9 +764,9 @@ def MasterSSKK(kset, anchor, iter, wavelength, n1, lstart, lend):
     return plt_data, vars
 
 def solve_phase(phase_files, params):
-    (lstart2, lend2, low, UV, lamdiff, maxScale, lowb, upb, lowc, upc, lows1, ups1, lows2, ups2, lows3, ups3, 
-    lowd1, upd1, lowd2, upd2, lowd3, upd3, guess_b, guess_c, guess_d1, guess_d2, guess_d3, guess_s1, guess_s2, guess_s3,
-    maxfun, funtol, xtol, maxit, spts, vislam, visn, wavelength, k, fit_order, Bg, phaseAngleCount, phaseGrainList) = params
+    
+    (lstart2, lend2, low, UV, lamdiff, maxScale, maxOffset, maxfun, funtol, xtol, maxit, spts, 
+     vislam, visn, wavelength, k, fit_order, Bg, phaseAngleCount, phaseGrainList, phase_bcsd) = params
 
     phase_file_key_list = range(phaseAngleCount)
     grain_samples = len(phaseGrainList.keys())
@@ -820,12 +820,14 @@ def solve_phase(phase_files, params):
         UVdata[i,:] = evalPoly(fcoef[i][::-1], leftw)
        
     longphasedata = np.concatenate((UVdata, phasedata[:,1:]),axis=1) #longphasedata = nfiles, head+prow3
-    wave = np.concatenate((leftw, wave[1:]),axis=0)
+    wave = np.concatenate((leftw, wave[:]),axis=0)
 
     v = vislam
     n = visn
 
     #make sure the arrays are all the same length
+    # If n wavelength array is shorter than k wavelength array
+    # Then we cut k
     kwave = wavelength
     if v[0] > kwave[0]:
         offset = v[0] - kwave[0]
@@ -836,24 +838,36 @@ def solve_phase(phase_files, params):
 
     #make sure the phase arrays are all the same length as n and k
     #fix start point
+    # If data wavelength array is longer than k wavelength array
+    # Then we cutting data wavelength
     if wave[0] < kwave[0]:
         offset = kwave[0] - wave[0]
         indexoff = round(offset/lamdiff)
         newstart = indexoff + 1
         wave = wave[newstart:]
+        v = v[newstart:]
+        n = n[newstart:]
         longphasedata = longphasedata[:,newstart:]
 
     #fix end point
     if kwave[-1] < wave[-1]:
-        newend = len(kwave)+1
+        newend = len(kwave) # This is inclusive -- Eli and Aish did a small test together
         wave = wave[:newend]
+        v = v[:newend]
+        n = n[:newend]
         longphasedata = longphasedata[:, :newend]
     
-    sizep=len(wave)
+    sizep=len(wave) #225
     
-    #Will have 7 columns
-    X = np.repeat(wave[:, np.newaxis], phaseAngleCount, axis=1)
+    #Will have #phasefile rows, wavelength columns
+    X = np.repeat(wave[:, np.newaxis], phaseAngleCount, axis=1).T
     
+    #Flatten longphase data - because that is least_squares wants its minimizing x to be
+    #Purpose is to unflatten later
+    #adding the extra variables at the beginning so we get to see them easily while debugging
+    #This appends each data to the end of the previous phase. One long array
+    flat_phasedata = longphasedata.flatten()
+
     #create coefficient array - this is what the program is solving for
     #lower limit for b
     lowbv1 = np.repeat(int(lowb), sizep, axis=0)

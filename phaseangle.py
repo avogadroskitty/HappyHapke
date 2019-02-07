@@ -4,5 +4,3 @@ class PhaseAngleObj:
         self.incident_angle = int(incident_angle)
         self.emission_angle = int(emission_angle)
         self.data = data
-
-
