@@ -27,6 +27,7 @@ class ProgramState(object):
 
     self.spectra = {}
     self.Bg = Bg
+    self.n1 = float(n1)
     for key in kwargs:
         if 'file' in key:
       #Checks if the infile variable has a string -- sanity check if not all ten files are uploaded
@@ -117,27 +118,13 @@ class ProgramState(object):
         traj = self.pp_spectra[key]
         #The hidden treasure where all the brains are hidden
         solved_k, scat_eff = analysis.MasterHapke1_PP(
-            self.hapke_scalar, traj, b, c, ff, s, D, key, debug_plots=True)
+            self.hapke_scalar, traj, b, c, ff, s, D, key, self.n1, debug_plots=True)
 
         self.ks[key] = solved_k
         self.scat_eff_grain[key] = scat_eff
     
     figures = [plt.figure(i) for i in plt.get_fignums()]
     return 'Solved for k: ', 'guessk', figures
-  #Section Two by Default, Section Three and Four - Matlab Code
-  def solve_for_k(self, key='file2', b=0, c=0, ff=0.000000001, s=0, D=0):
-    b, c, s, D, ff = map(float, (b, c, s, D, ff))
-    self.guesses[key] = (b, c, s, D, ff)
-    traj = self.pp_spectra[key]
-    plt.close('all')  # hack!
-    #The hidden treasure where all the brains are hidden
-    solved_k, scat_eff = analysis.MasterHapke1_PP(
-        self.hapke_scalar, traj, b, c, ff, s, D, debug_plots=True)
-
-    self.ks[key] = solved_k
-    self.scat_eff_grain[key] = scat_eff
-    figures = [plt.figure(i) for i in plt.get_fignums()]
-    return 'Solved for k: ', 'sk-' + key, figures
 
   def optimize_global_k(self, guess_key='file2', opt_strategy='slow',lowk=0, upk=0, num_solns=1, **kwargs):
     #The previous step only approximates for a single grain size
@@ -185,7 +172,7 @@ class ProgramState(object):
 
     # solve
     tmp = analysis.MasterHapke2_PP(
-        self.hapke_vector_isow, self.pp_spectra, guesses, lb, ub, ff,
+        self.hapke_vector_isow, self.pp_spectra, guesses, lb, ub, ff, self.n1,
         tr_solver='lsmr', verbose=2, spts=int(num_solns))
     solns = [res.x for res in tmp]
     best_soln = min(tmp, key=lambda res: res.cost).x
@@ -234,7 +221,7 @@ class ProgramState(object):
       wave, orig = self.pp_spectra[key].T
       b, c, s, D = best_soln[i:total_guesses:no_of_grain_samples]
       scat = self.hapke_vector_isow.scattering_efficiency(best_soln[total_guesses:], wave,
-                                                          D, s)
+                                                          D, s, self.n1)
       rc = self.hapke_vector_isow.radiance_coeff(scat, b, c, ff[i])
 
       ax1.plot(wave, orig,label=('%s grain' % key))
@@ -316,9 +303,10 @@ class ProgramState(object):
       phase_bcsd = {}
       for i in range(no_grain_sizes):
           phaseGrainList[i] = []
-          bcsd = kwargs['p_b_'+i], kwargs['p_c_'+i], kwargs['p_s_'+i], kwargs['p_d_'+i]
-          lb_bcsd = kwargs['plb_b_'+i], kwargs['plb_c_'+i], kwargs['plb_s_'+i], kwargs['plb_d_'+i]              
-          ub_bcsd = kwargs['pub_b_'+i], kwargs['pub_c_'+i], kwargs['pub_s_'+i], kwargs['pub_d_'+i]
+          ii = str(i)
+          bcsd = float(kwargs['p_b_'+ii]), float(kwargs['p_c_'+ii]), float(kwargs['p_s_'+ii]), float(kwargs['p_d_'+ii])
+          lb_bcsd = float(kwargs['plb_b_'+ii]), float(kwargs['plb_c_'+ii]), float(kwargs['plb_s_'+ii]), float(kwargs['plb_d_'+ii])              
+          ub_bcsd = float(kwargs['pub_b_'+ii]), float(kwargs['pub_c_'+ii]), float(kwargs['pub_s_'+ii]), float(kwargs['pub_d_'+ii])
 
           phase_bcsd[i] = bcsd, lb_bcsd, ub_bcsd
           for j in range(int(phaseAngleCount)):
@@ -326,7 +314,7 @@ class ProgramState(object):
               data = analysis.loadmat_single(kwargs['filepfile'+id])
               phaseAngle = PhaseAngleObj(i, kwargs['pfile_i'+id], kwargs['pfile_e'+id], data)
               phaseGrainList[i].append(phaseAngle)
-          phaseGrainList[i].sort(key=lambda x: x.incident_angle)
+          phaseGrainList[i].sort(key=lambda x: (x.incident_angle, x.emission_angle))
       
     #This program will use data from multiple viewing geometries to calculate
     #phase function parameters for a sample where k and n for i=30, e=0 is already
@@ -336,6 +324,9 @@ class ProgramState(object):
     #coefficients for the phase function by minimizing the difference between
     #the calculated and observed data for multiple viewing geometries and
     #multiple grain sizes simultaneously.
+      ffs = {}
+      for i, key in enumerate(self.guesses.keys()):
+          ffs[i] = self.guesses[key][4]
 
       lstart2 = self.sskk_lstart
       lend2 = self.sskk_lend
@@ -343,8 +334,8 @@ class ProgramState(object):
       low, high, UV = self.pp_bounds
       vislam, visn = self.vislam, self.visn
       wavelength = self.pp_spectra['file2'][:,0] 
-      params = (lstart2, lend2, low, UV, lamdiff, maxScale, maxOffset, maxfun, funtol, xtol, maxit, spts, 
-                vislam, visn, wavelength, k, int(fit_order), int(self.Bg),  int(phaseAngleCount), phaseGrainList, phase_bcsd)
+      params = (lstart2, lend2, low, UV, lamdiff, int(maxScale), int(maxOffset), int(maxfun), float(funtol), float(xtol), int(maxit), int(spts), 
+                vislam, visn, wavelength, k, int(fit_order), int(phaseAngleCount), phaseGrainList, phase_bcsd, ffs, self.hapke_vector_isow)
 
       pltdata, vars = analysis.solve_phase(self.phases, params)
 

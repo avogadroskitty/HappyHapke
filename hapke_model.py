@@ -64,9 +64,8 @@ class _BaseHapke(object):
       model.Bg1 = opposition_surge + 1
     return model
 
-  def scattering_efficiency(self, k, wave, D, s, n, thetai, thetae):
+  def scattering_efficiency(self, k, wave, D, s, n):
     
-    self._init_angles(thetai, thetae)
     self._init_refraction(n)
 
     Alpha = (4 * np.pi * k) / wave
