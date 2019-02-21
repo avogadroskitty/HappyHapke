@@ -154,6 +154,10 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                         <input name='fit_order' type='number' step=1 value=1 min=0 max=5>
                         Polynomial order.
                     </label>
+                    <label>
+                        <input name='idx_in' type='number' step=1 value=1 min=0 max=5>
+                        Initial Points to Fit
+                    </label>
                 </div>
             </section>
 
@@ -328,11 +332,19 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                 </div>
                 <div class='param_group'>
                     <label>
-                        Max Scale: <input name='maxScale' type='number' step='1' value='10' min='10' />
+                        Min Scale: <input name='minScale' type='number' step='any' value='0.01' min='0.01' max='9'/>
                     </label>
 
                     <label>
-                        Max Offset: <input name='maxOffset' type='number' step='1' value='10' min='10' />
+                        Max Scale: <input name='maxScale' type='number' step='any' value='0.11' min='0.011' max='10' />
+                    </label>
+
+                    <label>
+                        Min Offset: <input name='minOffset' type='number' step='any' value='-0.000000008' min="-0.00000008" max="0.0009" />
+                    </label>
+
+                    <label>
+                        Max Offset: <input name='maxOffset' type='number' step='any' value='-0.000000007' min='-0.000000007' max="0.001" />
                     </label>
 
                     <div>
@@ -340,22 +352,22 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                         <div>
                             <div>
                                 <label>
-                                    Max Function Evaluations D1: <input name='maxfun' type='number' step='1' value='100000000000' />
+                                    Max Function Evaluations D1: <input name='maxfun' type='number' value='100000000000' />
                                 </label>
                             </div>
                             <div>
                                 <label>
-                                    Function Tolerance (smaller is closer match): <input name='funtol' type='number' step='1' value='0.00000000000001' />
+                                    Function Tolerance (smaller is closer match): <input name='funtol' type='number' value='0.00000000000001' />
                                 </label>
                             </div>
                             <div>
                                 <label>
-                                    X Tolerance: <input name='xtol' type='number' step='1' value='0.0000000000001' />
+                                    X Tolerance: <input name='xtol' type='number' value='0.01' step="any" />
                                 </label>
                             </div>
                             <div>
                                 <label>
-                                    Maximum Iterations: <input name='maxit' type='number' step='1' value='1000' />
+                                    Maximum Iterations: <input name='maxit' type='number' value='1000' />
                                 </label>
                             </div>
                             <div>

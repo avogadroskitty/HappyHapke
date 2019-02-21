@@ -36,7 +36,7 @@ def prepare_spectrum(wavelength, spec, low, high):
   return wavelength[idx1:idx2 + 1], spec[idx1:idx2 + 1]
 
 
-def fit_left_side(wavelength, spec, UV, fit_order=0):
+def fit_left_side(wavelength, spec, UV, fit_order=0, idx = 3):
   # fit the left end of the data with a polynomial
   lamdiff = wavelength[1] - wavelength[0]
   leftw = np.arange(UV, wavelength[0], lamdiff)
@@ -47,7 +47,6 @@ def fit_left_side(wavelength, spec, UV, fit_order=0):
     spec = np.concatenate((padding + spec[0], spec))
   else:
     # define end of curve to fit
-    idx = len(leftw) + 5 # Change 1 to optional user input
     fit_order = min(fit_order, len(leftw))
     # fit curves
     # Takes the wavelength, spectrum points as x,y and fits a polynomial on it. Degree is the fitorder variable 
@@ -59,10 +58,10 @@ def fit_left_side(wavelength, spec, UV, fit_order=0):
   return np.column_stack((wavelength, spec))
 
 
-def preprocess_traj(traj, low, high, UV, fit_order=0):
+def preprocess_traj(traj, low, high, UV, fit_order=0, idx = 3):
   wave, spec = traj.T
   wave, spec = prepare_spectrum(wave, spec, low, high)
-  return fit_left_side(wave, spec, UV, fit_order=fit_order)
+  return fit_left_side(wave, spec, UV, fit_order=fit_order, idx=idx)
 
 #Solving for K - Logic -- setup the matrices here. For plotting get values from the hapke object - defined in hapke_model.py
 def MasterHapke1_PP(hapke, traj, b, c, ff, s, D, key, n, debug_plots=False):
@@ -187,7 +186,7 @@ def MasterHapke2_PP(hapke, spectra, coefg, lb, ub, ff, n, spts=1, **kwargs):
   solutions = []
   #For each start point - minimize the least square error and append it to solutions.
   for spt in start_points:
-    res = least_squares(obj_fn, spt, bounds=bounds, ftol=1.0e-16, xtol=2.23e-16,x_scale = 'jac', method='trf', max_nfev=1, **kwargs)
+    res = least_squares(obj_fn, spt, bounds=bounds, ftol=1.0e-16, xtol=2.23e-16,x_scale = 'jac', method='trf', max_nfev=300, diff_step=1e-6, **kwargs)
     #res = least_squares(obj_fn, spt, bounds=bounds, method='trf', **kwargs)
     solutions.append(res)
   return solutions
@@ -329,7 +328,7 @@ def adj_method_0(cache):
         ax1.semilogy(v, k, label='MIR k')
         ax1.semilogy(new_vnirv, new_vnirk, label='Evenly spaced VNIR k')
         ax1.semilogy(vcon, kcon,  label = 'Extended k')
-        ax1.semilogy(fullv, fullk, label = 'Whole k')
+        ax1.semilogy(fullv, fullk,'-', label = 'Whole k')
         ax1.legend()
         ax1.set_xlabel('Wavenumber(cm e-1)')
         ax1.set_ylabel('k')
@@ -353,7 +352,7 @@ def adj_method_0(cache):
         ax1.semilogy(v, k, label='MIR k')
         ax1.semilogy(nv, nk, label='Cropped MIR k')
         ax1.semilogy(new_vnirv, new_vnirk, label = 'Evenly spaced VNIR k')
-        ax1.semilogy(fullv, fullk, label = 'Whole k')
+        ax1.semilogy(fullv, fullk,'-', label = 'Whole k')
         ax1.legend()
         ax1.set_xlabel('Wavenumber(cm e-1)')
         ax1.set_ylabel('k')
@@ -373,7 +372,7 @@ def adj_method_1(cache):
     #Make a linearly increasing array
     y = np.linspace(0.0000001, 1, len(k))
     #Make an array that is exponential in logspace
-    y_scale = 10**(y**10)
+    y_scale = 10**(y**10) # Eli thinks this can be a user input -- but not in 2019....
     #Flip it so that it is multiplying correctly
     y_scale = np.flip(y_scale, axis=0)
     #Adjust MIR k by dividing the scaling factor
@@ -407,7 +406,7 @@ def adj_method_1(cache):
         ax2.semilogy(v, nk, label='Scaled MIR k')
         ax2.semilogy(new_vnirv, new_vnirk, label = 'Evenly spaced VNIR k')
         ax2.semilogy(vcon, kcon, label = 'Extended k')
-        ax2.semilogy(full_v, full_k, label = 'Whole k')
+        ax2.semilogy(full_v, full_k,'-', label = 'Whole k')
         ax2.legend()
         ax2.set_xlabel('Wavenumber(cm e-1)')
         ax2.set_ylabel('k')
@@ -430,7 +429,7 @@ def adj_method_1(cache):
         ax2.semilogy(v, k, label='MIR k')
         ax2.semilogy(nv, nk, label='scaled MIR k')
         ax2.semilogy(new_vnirv, new_vnirk, label = 'Evenly spaced VNIR k')
-        ax2.semilogy(fullv, fullk, label = 'Whole k') ## There is a additional label in the matlab code
+        ax2.semilogy(fullv, fullk,'-', label = 'Whole k') ## There is a additional label in the matlab code
         ax2.legend()
         ax2.set_xlabel('Wavenumber(cm e-1)')
         ax2.set_ylabel('k')
@@ -445,7 +444,7 @@ def adj_method_1(cache):
 def adj_method_2(cache):
     plt_data = []
     (v, k, lam, vnirk, vnirv, rev_vnirk, rev_vnirv, even_vnirk, even_vnirv, new_vnirk, new_vnirv, vnirv_end, v_end, vdiff, vnirvdiff) = cache
-    if v_end > vnirv_end:
+    if v_end < vnirv_end:
         new_end = v_end # - vnirvdiff -- taking this out leads to a double point later
         #Fit the end of the data so that it will meet the MIR data
         ## Requires different functions sometimes, try POLY3, POLY4
@@ -525,9 +524,9 @@ def adj_method_2(cache):
         fullk = np.concatenate((fvnirk, adjk), axis=None)
     
         fig3, ax3 = plt.subplots(figsize=(6, 4), frameon=False)
-        ax3.semilogy(fullv, fullk, label='Combined k')
         ax3.semilogy(nv, adjk, label='Adjusted MIR k')
         ax3.semilogy(fv, fvnirk, label='VNIR k')
+        ax3.semilogy(fullv, fullk, '-', label='Combined k')
         ax3.legend()
         ax3.set_xlabel('Wavenumber(cm e-1)')
         ax3.set_ylabel('k')
@@ -563,7 +562,7 @@ def adj_method_3(cache): #this will bring MIRk down some VNIRk up some and draw 
         ax1.semilogy(v, adjk, label='Adjusted MIR k')
         ax1.semilogy(new_vnirv, new_vnirk, label='Evenly Spaced VNIR k')        
         ax1.semilogy(vcon, kcon, label='Extended k')        
-        ax1.semilogy(fullv, fullk, label='Whole k')
+        ax1.semilogy(fullv, fullk,'-',label='Whole k')
         ax1.legend()
         ax1.set_xlabel('Wavenumber(cm e-1)')
         ax1.set_ylabel('k')
@@ -592,7 +591,7 @@ def adj_method_3(cache): #this will bring MIRk down some VNIRk up some and draw 
         ax1.semilogy(v, adjk, label='Adjusted MIR k')        
         ax1.semilogy(nv, nk, label='Cropped MIR k')    
         ax1.semilogy(new_vnirv, new_vnirk, label='Evenly Spaced VNIR k')
-        ax1.semilogy(fullv, fullk, label='Whole k')
+        ax1.semilogy(fullv, fullk,'-', label='Whole k')
         ax1.legend()
         ax1.set_xlabel('Wavenumber(cm e-1)')
         ax1.set_ylabel('k')
@@ -768,7 +767,7 @@ def MasterSSKK(kset, anchor, iter, wavelength, n1, lstart, lend):
 
 def solve_phase(phase_files, params):
     
-    (lstart2, lend2, low, UV, lamdiff, maxScale, maxOffset, maxfun, funtol, xtol, maxit, spts, 
+    (lstart2, lend2, low, UV, lamdiff, minScale, maxScale, minOffset, maxOffset, maxfun, funtol, xtol, maxit, spts, 
      vislam, visn, wavelength, k, fit_order, phaseAngleCount, phaseGrainList, phase_bcsd, ffs, hapke) = params
 
     phase_file_key_list = range(phaseAngleCount)
@@ -906,43 +905,43 @@ def solve_phase(phase_files, params):
 
         scalar_b_list.append(np.repeat(bi, sizep, axis=0))
         scalar_c_list.append(np.repeat(ci, sizep, axis=0))
-        scalar_s_list.append(np.repeat(si, phaseAngleCount, axis=0))
-        scalar_d_list.append(np.repeat(di, phaseAngleCount, axis=0))
-        scalar_ff_list.append(np.repeat(ffs[i], phaseAngleCount, axis=0))
+        scalar_s_list.append(si) #np.repeat(si, phaseAngleCount, axis=0)
+        scalar_d_list.append(di) #np.repeat(di, phaseAngleCount, axis=0)
+        scalar_ff_list.append(ffs[i]) #np.repeat(ffs[i], phaseAngleCount, axis=0)
 
         scalar_lb_b_list.append(np.repeat(lb_bi, sizep, axis=0))
         scalar_lb_c_list.append(np.repeat(lb_ci, sizep, axis=0))
-        scalar_lb_s_list.append(np.repeat(lb_si, phaseAngleCount, axis=0))
-        scalar_lb_d_list.append(np.repeat(lb_di, phaseAngleCount, axis=0))
+        scalar_lb_s_list.append(lb_si) #np.repeat(lb_si, phaseAngleCount, axis=0)
+        scalar_lb_d_list.append(lb_di) #np.repeat(lb_di, phaseAngleCount, axis=0)
         
         scalar_ub_b_list.append(np.repeat(ub_bi, sizep, axis=0))
         scalar_ub_c_list.append(np.repeat(ub_ci, sizep, axis=0))
-        scalar_ub_s_list.append(np.repeat(ub_si, phaseAngleCount, axis=0))
-        scalar_ub_d_list.append(np.repeat(ub_di, phaseAngleCount, axis=0))
+        scalar_ub_s_list.append(ub_si) #np.repeat(ub_si, phaseAngleCount, axis=0)
+        scalar_ub_d_list.append(ub_di) #np.repeat(ub_di, phaseAngleCount, axis=0)
 
     b = np.hstack(tuple(scalar_b_list))
     c = np.hstack(tuple(scalar_c_list))
-    s = np.hstack(tuple(scalar_s_list))
-    d = np.hstack(tuple(scalar_d_list))
+    s = np.hstack(tuple(scalar_s_list)) #grain_samples long
+    d = np.hstack(tuple(scalar_d_list)) #grain_samples long
     ff = np.hstack(tuple(scalar_ff_list))
 
     lb_b = np.hstack(tuple(scalar_lb_b_list))
     lb_c = np.hstack(tuple(scalar_lb_c_list))
-    lb_s = np.hstack(tuple(scalar_lb_s_list))
-    lb_d = np.hstack(tuple(scalar_lb_d_list))
+    lb_s = np.hstack(tuple(scalar_lb_s_list)) #grain_samples long
+    lb_d = np.hstack(tuple(scalar_lb_d_list)) #grain_samples long
 
     ub_b = np.hstack(tuple(scalar_ub_b_list))
     ub_c = np.hstack(tuple(scalar_ub_c_list))
-    ub_s = np.hstack(tuple(scalar_ub_s_list))
-    ub_d = np.hstack(tuple(scalar_ub_d_list))
+    ub_s = np.hstack(tuple(scalar_ub_s_list)) #grain_samples long
+    ub_d = np.hstack(tuple(scalar_ub_d_list)) #grain_samples long
 
     #stack b,c,s,d
-    bcsd_guess = np.hstack((b,c,s,d)) #b,c == sizep*gs, s,d = nfiles
-    bcsd_lb = np.hstack((lb_b,lb_c,lb_s,lb_d)) #b,c == sizep*gs, s,d = nfiles
-    bcsd_ub = np.hstack((ub_b,ub_c,ub_s,ub_d)) #b,c == sizep*gs, s,d = nfiles
+    bcsd_guess = np.hstack((b,c,s,d)) #b,c == sizep*gs, s,d = grain samples
+    bcsd_lb = np.hstack((lb_b,lb_c,lb_s,lb_d)) #b,c == sizep*gs, s,d = grain samples
+    bcsd_ub = np.hstack((ub_b,ub_c,ub_s,ub_d)) #b,c == sizep*gs, s,d = grain samples
     
     bcsd_guess = np.append([1,0], bcsd_guess) # scale and offset guesses
-    bcsd_lb = np.append([1,0], bcsd_lb) #bounds are inclusive
+    bcsd_lb = np.append([minScale,minOffset], bcsd_lb) #bounds are inclusive
     bcsd_ub = np.append([maxScale,maxOffset], bcsd_ub)
 
     #thetai and thetae should be nfiles, 1
@@ -962,27 +961,7 @@ def solve_phase(phase_files, params):
 
     def obj_fun(coefp):
         loss = 0
-        scale = coefp[0]
-        offset = coefp[1]
-        coefp = coefp[2:]
-        b = coefp[:sizep*grain_samples]
-        c = coefp[sizep*grain_samples:sizep*grain_samples*2]
-        s = coefp[sizep*grain_samples*2:sizep*grain_samples*2+nfiles][:,np.newaxis]
-        d = coefp[sizep*grain_samples*2+nfiles:][:,np.newaxis]
-
-        #Now we are splittinng to their individual grain sizes
-        b_ustk = np.split(b, grain_samples)
-        c_ustk = np.split(c, grain_samples)
-        blst = []
-        clst = []
-        for i in range(grain_samples):
-            blst.append(np.repeat(b_ustk[i][np.newaxis, :], phaseAngleCount, axis=0))
-            clst.append(np.repeat(c_ustk[i][np.newaxis, :], phaseAngleCount, axis=0))
-        allb = np.vstack(blst) #nfiles, sizep
-        allc = np.vstack(clst) #nfiles, sizep
-
-        scat = hapke.scattering_efficiency(favk, fav_wave, d, s, favn)
-        rc = hapke.radiance_coeff(scat, allb, allc, ff)
+        rc, scale, offset = phase_rc(coefp, hapke, sizep, grain_samples, phaseAngleCount, favk, fav_wave, favn, ff)
         loss += ((rc - longphasedata)**2).sum()
         return np.sqrt(loss)
     
@@ -997,7 +976,128 @@ def solve_phase(phase_files, params):
     bounds = np.row_stack((bcsd_lb, bcsd_ub))
     solutions = []
     #For each start point - minimize the least square error and append it to solutions.
-    for spt in start_points:
-        res = least_squares(obj_fun, spt, bounds=bounds, ftol = funtol, xtol = xtol, x_scale = 'jac', method = 'trf', max_nfev = maxfun)
+
+    _, axes = plt.subplots(figsize=(10,grain_samples*3), nrows=grain_samples, ncols=4)
+    fig1, ax1 = plt.subplots(figsize=(6,4), frameon=False)
+
+    axes[0,0].set_title('Converged b')
+    axes[0,1].set_title('Converged c')
+    axes[0,2].set_title('s')
+    axes[0,3].set_title('D')
+    
+    s_st = {g: [] for g in range(grain_samples)} 
+    s_ep = {g: [] for g in range(grain_samples)}
+    d_st = {g: [] for g in range(grain_samples)}
+    d_ep = {g: [] for g in range(grain_samples)}
+
+    plt_data = []
+
+    for s, spt in enumerate(start_points):
+        res = least_squares(obj_fun, spt, bounds=bounds, ftol = funtol, xtol = xtol, x_scale = 'jac', method = 'trf', max_nfev = maxfun, diff_step=1e-3, tr_solver='lsmr', verbose=2)
         solutions.append(res)
-    return solutions
+
+        #Time to build plots for each start point
+        
+        #Plotting the scaled and offset K
+        spt_scale = res.x[0]
+        spt_offset = res.x[1]
+        #Take only k form the gigantic array of favk which is repeated nfiles times
+        spt_k = favk[0] * spt_scale + spt_offset 
+        ax1.semilogy(wave, spt_k, label='spt-'+str(s+1))
+        plt_data.append(['offk_spt-'+str(s+1),wave, spt_k])
+        ax1.set_title('Scaled and Offset K')
+        ax1.set_xlabel('Wavelength')
+        ax1.set_ylabel('K')
+        ax1.legend() ## this is not good -- but easy to maintain
+
+        ##Getting all the converged values
+        con_sol = res.x[2:]
+        b = con_sol[:sizep*grain_samples]
+        c = con_sol[sizep*grain_samples:sizep*grain_samples*2]
+        s_ep_all = con_sol[sizep*grain_samples*2:sizep*grain_samples*2+grain_samples]
+        d_ep_all = con_sol[sizep*grain_samples*2+grain_samples:]
+
+        s_st_all = spt[sizep*grain_samples*2+2:sizep*grain_samples*2+grain_samples+2]
+        d_st_all = spt[sizep*grain_samples*2+grain_samples+2:]
+
+        ##Loading to the list previously
+        for g in range(grain_samples):
+            s_st[g].append(s_st_all[g])
+            s_ep[g].append(s_ep_all[g])
+            d_st[g].append(d_st_all[g])
+            d_ep[g].append(d_ep_all[g])
+
+            bax = axes[g, 0]
+            cax = axes[g, 1]
+            sax = axes[g, 2]
+            dax = axes[g, 3]
+
+            bax.plot(wave, b[len(wave)*g:len(wave)*(g+1)], label='sp:'+str(s+1))
+            cax.plot(wave, c[len(wave)*g:len(wave)*(g+1)], label='sp:'+str(s+1))
+            
+            #Adding to Plot data
+            plt_data.append(['b_sp-'+str(s+1)+'_gs-'+str(g+1), wave, b[len(wave)*g:len(wave)*(g+1)]])
+            plt_data.append(['c_sp-'+str(s+1)+'_gs-'+str(g+1), wave, c[len(wave)*g:len(wave)*(g+1)]])
+            
+            ##Plot only after all the start points are run
+            if s == (spts - 1):
+                sax.plot(range(spts), s_st[g], '*r', range(spts), s_ep[g],'.g')
+                dax.plot(range(spts), d_st[g], '*r', range(spts), d_ep[g],'.g')
+                
+                plt_data.append(['s_sp-'+str(s+1)+'_gs-'+str(g+1), range(spts), s_ep[g]])
+                plt_data.append(['d_sp-'+str(s+1)+'_gs-'+str(g+1), range(spts), d_ep[g]])
+
+            bax.legend()
+            cax.legend()
+            bax.set_ylabel('file'+str(g+1))
+            bax.set_xlabel('Wavelength')
+            cax.set_xlabel('Wavelength')
+            sax.set_xlabel('Start Points')
+            dax.set_xlabel('Start Points')
+
+    ## Plotting the best solution
+    best_soln = min(solutions, key=lambda res: res.cost).x
+    brc, bscale, boffset = phase_rc(best_soln, hapke, sizep, grain_samples, phaseAngleCount, favk, fav_wave, favn, ff)
+
+    fig2, ax2 = plt.subplots(figsize=(8,6), frameon=False)
+    for i in range(nfiles):
+        ax2.plot(wave, brc[i], '-b', label='RC-'+str(i+1))
+        ax2.plot(wave, longphasedata[i], ':r', label='LPD-'+str(i+1))
+        plt_data.append(['RC-'+str(i+1), wave, brc[i]])
+        plt_data.append(['LPD-'+str(i+1), wave, longphasedata[i]])
+    ax2.set_xlabel('Wavelength')
+    ax2.set_ylabel('Reflectance')
+    ax2.set_title('Wavelength vs Reflectance')
+
+    return plt_data
+
+def phase_rc(coefp, hapke, sizep, grain_samples, phaseAngleCount, favk, fav_wave, favn, ff):
+        scale = coefp[0]
+        offset = coefp[1]
+        coefp = coefp[2:]
+        b = coefp[:sizep*grain_samples]
+        c = coefp[sizep*grain_samples:sizep*grain_samples*2]
+        s = coefp[sizep*grain_samples*2:sizep*grain_samples*2+grain_samples]
+        d = coefp[sizep*grain_samples*2+grain_samples:]
+
+        #repeating s and d - phase angle times and fitting the shape appropriately
+        s = np.repeat(s, phaseAngleCount, axis=0)[:, np.newaxis]
+        d = np.repeat(d, phaseAngleCount, axis=0)[:, np.newaxis]
+
+        #Now we are splittinng to their individual grain sizes
+        b_ustk = np.split(b, grain_samples)
+        c_ustk = np.split(c, grain_samples)
+        blst = []
+        clst = []
+        for i in range(grain_samples):
+            blst.append(np.repeat(b_ustk[i][np.newaxis, :], phaseAngleCount, axis=0))
+            clst.append(np.repeat(c_ustk[i][np.newaxis, :], phaseAngleCount, axis=0))
+        allb = np.vstack(blst) #nfiles, sizep
+        allc = np.vstack(clst) #nfiles, sizep
+
+        favks = favk * scale + offset
+        scat = hapke.scattering_efficiency(favks, fav_wave, d, s, favn)
+        rc = hapke.radiance_coeff(scat, allb, allc, ff)
+
+        return rc, scale, offset
+        

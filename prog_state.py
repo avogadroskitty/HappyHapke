@@ -69,10 +69,11 @@ class ProgramState(object):
     return 'Initialization complete.', None, [fig]
 
   #Corresponds to section 1 of Matlab code - Finding the lambda and fitting the polynomial curve
-  def preprocess(self, low=0.32, high=2.55, UV=0, fit_order=1):
+  def preprocess(self, low=0.32, high=2.55, UV=0, fit_order=1, idx_in=3):
     low, high, UV = float(low), float(high), float(UV)
     self.pp_bounds = (low, high, UV)
     fit_order = int(fit_order)
+    idx_in = int(idx_in)
 
     if self.hapke_scalar.needs_isow:
       # initialize isow as a scalar
@@ -82,7 +83,7 @@ class ProgramState(object):
     # run preprocessing on each spectrum
     for key, traj in self.spectra.items():
       self.pp_spectra[key] = analysis.preprocess_traj(traj, low, high, UV,
-                                                      fit_order=fit_order)
+                                                      fit_order=fit_order, idx = idx_in)
 
     # plot the results
     fig = Figure(figsize=(6, 4), frameon=False, tight_layout=True)
@@ -216,7 +217,7 @@ class ProgramState(object):
     # plot resulting rc vs original data for the best soln
     fig2, (ax1, ax2) = plt.subplots(figsize=(9,4), ncols=2, sharex=True,
                                     frameon=False)
-    best_soln = solns[-1]
+    #best_soln = solns[-1]
     for i, key in enumerate(sorted(self.spectra.keys())):
       wave, orig = self.pp_spectra[key].T
       b, c, s, D = best_soln[i:total_guesses:no_of_grain_samples]
@@ -274,6 +275,7 @@ class ProgramState(object):
     #Select anchor wavelength (this is usually sodium D line of 0.58929um)
     #this is the wavelength at which n1 was determined
     #iteration through program
+    plt.close('all')  # hack!
 
     n1 = self.hapke_scalar.n1
     kset = self.vnirv, self.vnirk, self.fullv, self.fullk
@@ -291,9 +293,12 @@ class ProgramState(object):
     
     return 'Solved for n: ', 'sskk', figures
 
-  def phase_solver(self, phaseAngleCount, fit_order, maxOffset = 0, maxScale=10, maxfun = 1000000000000000000, 
+  def phase_solver(self, phaseAngleCount, fit_order, minScale, maxScale, minOffset, maxOffset, maxfun = 1000000000000000000, 
                    spts=30, funtol = 0.00000000000001, xtol= 0.00000000000001, maxit=1000 , **kwargs ):
+      
+      plt.close('all')  # hack!
       k = self.ks['global']
+
 
       #Input: grain size, phase angle
       self.phases = {}
@@ -334,59 +339,14 @@ class ProgramState(object):
       low, high, UV = self.pp_bounds
       vislam, visn = self.vislam, self.visn
       wavelength = self.pp_spectra['file2'][:,0] 
-      params = (lstart2, lend2, low, UV, lamdiff, int(maxScale), int(maxOffset), int(maxfun), float(funtol), float(xtol), int(maxit), int(spts), 
+      params = (lstart2, lend2, low, UV, lamdiff, float(minScale), float(maxScale), float(minOffset), float(maxOffset), int(maxfun), float(funtol), float(xtol), int(maxit), int(spts), 
                 vislam, visn, wavelength, k, int(fit_order), int(phaseAngleCount), phaseGrainList, phase_bcsd, ffs, self.hapke_vector_isow)
 
-      pltdata, vars = analysis.solve_phase(self.phases, params)
+      plt_data = analysis.solve_phase(self.phases, params)
+      figures = [plt.figure(i) for i in plt.get_fignums()]
+      self.phase = plt_data
 
       return 'Phase Solved ', 'psolve', figures
-
-  def solve_phase(self, phase_files=(), phase_thetai=(), phase_thetae=(),
-                  phase_sizes=(), downsample_factor=1):
-    # HACK: use defaults if inputs aren't provided
-    if not phase_files:
-      # phase_files = glob('../data/smKJ*.mat')
-      phase_files = glob('../data/BytW*.asc')
-      info = [os.path.splitext(os.path.basename(f))[0][4:] for f in phase_files]
-      size_map = dict(S='file1', M='file2', B='file3')
-      phase_sizes = [size_map[x[0]] for x in info]
-      phase_thetai = [int(x.split('i',1)[1].split('e',1)[0]) for x in info]
-      phase_thetae = [int(x.split('e',1)[1].strip('b')) for x in info]
-
-    # organize data by grain size, and
-    # preprocess the new data like we did with the old data
-    low, high, UV = self.pp_bounds
-    data = {'file1': [], 'file2': [], 'file3': []}
-    thetai = {'file1': [], 'file2': [], 'file3': []}
-    thetae = {'file1': [], 'file2': [], 'file3': []}
-    for f,sz,ti,te in zip(phase_files, phase_sizes, phase_thetai, phase_thetae):
-      traj = analysis.loadmat_single(f)
-      traj = analysis.preprocess_traj(traj, *self.pp_bounds)
-      data[sz].append(traj)
-      thetai[sz].append(np.deg2rad(float(ti)))
-      thetae[sz].append(np.deg2rad(float(te)))
-
-    # prep the inputs to the optimization code
-    lb, ub = self.bounds
-    k = self.ks['global']
-    guesses = np.empty(4 + len(k))
-    guesses[4:] = k
-
-    # optimize each grainsize separately
-    for sz in ('file1', 'file2', 'file3'):
-      b, c, s, D, ff = self.guesses[sz]
-      guesses[:4] = (b, c, s, D)
-      model = self.hapke_vector_n.copy(incident_angle=thetai[sz],
-                                       emission_angle=thetae[sz])
-      solns = analysis.MasterPhase1(model, data[sz], guesses, lb, ub, ff)
-      best_soln = solns[-1]  # maybe?
-
-      # save the best solution
-      self.ks['final_'+sz] = best_soln[4:]
-      b, c, s, D = best_soln[:4]
-      self.guesses['final_'+sz] = (b, c, s, D, ff)
-
-    return '', []
 
   #Download Handler - When param passed is according to the section
   def _download_data(self, param):
@@ -401,20 +361,12 @@ class ProgramState(object):
           fname = '%s.txt' % names[key]
           zf.writestr(fname, _traj2bytes(self.pp_spectra[key]))
       return 'preprocessed.zip', 'application/zip', buf.getvalue()
-    elif param.startswith('sk-'):
-      key = param.split('-', 1)[1]
-      buf = BytesIO()
-      with ZipFile(buf, mode='w') as zf:
-        for s_data in self.scat_eff_grain[key]: 
-          file = '%s.txt' % s_data[0]
-          zf.writestr(file, _plot2bytes(s_data[1], s_data[2]))
-      return 'solved_k_data-%s.zip' % key, 'application/zip', buf.getvalue()
-    elif param.startswith('k-'):
+    elif param.startswith('k-'): # Global k step
       key = param.split('-', 1)[1]
       fname = 'k_%s.txt' % names[key]
       print_vec = _vec2bytes(self.ks[key])
       return fname, 'text/plain', print_vec
-    elif param == 'guessk':
+    elif param == 'guessk': #For all individual ks
         buf = BytesIO()
         with ZipFile(buf, mode='w') as zf:
             for key in self.scat_eff_grain.keys():
@@ -437,6 +389,13 @@ class ProgramState(object):
                 zf.writestr(file, _plot2bytes(plt[1], plt[2]))
         return 'SSKK Data.zip', 'application/zip', buf.getvalue()
         #return 'n.txt', 'text/plain', _vec2bytes(self.hapke_vector_n.n)
+    elif param == 'psolve':
+        buf = BytesIO()
+        with ZipFile(buf, mode='w') as zf:
+            for plt in self.phase:
+                file = '%s.txt' % plt[0]
+                zf.writestr(file, _plot2bytes(plt[1], plt[2]))
+        return 'PhaseSolve.zip', 'application/zip', buf.getvalue()
     else:
       raise ValueError('Unknown download type: %r' % param)
 
