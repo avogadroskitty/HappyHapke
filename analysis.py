@@ -2,6 +2,7 @@ from __future__ import division, print_function
 import numpy as np
 import scipy.io
 from matplotlib import pyplot as plt
+import matplotlib.patches as mpatches
 #Fix for Error in Section 3 - Solve For K in external Library Matplotlib
 plt.switch_backend('agg')
 from scipy.optimize import least_squares
@@ -1054,6 +1055,10 @@ def solve_phase(phase_files, params):
             cax.set_xlabel('Wavelength')
             sax.set_xlabel('Start Points')
             dax.set_xlabel('Start Points')
+            st = mpatches.Patch(color='red', label='Guess')
+            ep = mpatches.Patch(color='green', label='Converged')
+            sax.legend(handles=[st, ep])
+            dax.legend(handles=[st, ep])
 
     ## Plotting the best solution
     best_soln = min(solutions, key=lambda res: res.cost).x
@@ -1061,13 +1066,16 @@ def solve_phase(phase_files, params):
 
     fig2, ax2 = plt.subplots(figsize=(8,6), frameon=False)
     for i in range(nfiles):
-        ax2.plot(wave, brc[i], '-b', label='RC-'+str(i+1))
-        ax2.plot(wave, longphasedata[i], ':r', label='LPD-'+str(i+1))
+        ax2.plot(wave, brc[i], ':r', label='RC-'+str(i+1))
+        ax2.plot(wave, longphasedata[i], '-b', label='LPD-'+str(i+1))
         plt_data.append(['RC-'+str(i+1), wave, brc[i]])
         plt_data.append(['LPD-'+str(i+1), wave, longphasedata[i]])
     ax2.set_xlabel('Wavelength')
     ax2.set_ylabel('Reflectance')
     ax2.set_title('Wavelength vs Reflectance')
+    rc = mpatches.Patch(color='red', label='Model')
+    lpd = mpatches.Patch(color='blue', label='Data')
+    plt.legend(handles=[rc, lpd])
 
     return plt_data
 

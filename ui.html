@@ -336,7 +336,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                     </label>
 
                     <label>
-                        Max Scale: <input name='maxScale' type='number' step='any' value='0.11' min='0.011' max='10' />
+                        Max Scale: <input name='maxScale' type='number' step='any' value='10' min='0.011' max='10' />
                     </label>
 
                     <label>
@@ -344,7 +344,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                     </label>
 
                     <label>
-                        Max Offset: <input name='maxOffset' type='number' step='any' value='-0.000000007' min='-0.000000007' max="0.001" />
+                        Max Offset: <input name='maxOffset' type='number' step='any' value='0.001' min='-0.000000007' max="0.001" />
                     </label>
 
                     <div>
@@ -352,7 +352,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                         <div>
                             <div>
                                 <label>
-                                    Max Function Evaluations D1: <input name='maxfun' type='number' value='100000000000' />
+                                    Max Function Evaluations D1: <input name='maxfun' type='number' value='10000000000' />
                                 </label>
                             </div>
                             <div>
@@ -362,17 +362,17 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                             </div>
                             <div>
                                 <label>
-                                    X Tolerance: <input name='xtol' type='number' value='0.01' step="any" />
+                                    X Tolerance: <input name='xtol' type='number' value='0.000000001' step="any" />
                                 </label>
                             </div>
                             <div>
                                 <label>
-                                    Maximum Iterations: <input name='maxit' type='number' value='1000' />
+                                    Maximum Iterations: <input name='maxit' type='number' value='100' />
                                 </label>
                             </div>
                             <div>
                                 <label>
-                                    Start Points: <input name='spts' type='number' step='1' value='30' />
+                                    Start Points: <input name='spts' type='number' step='1' value='5' />
                                 </label>
                             </div>
                             <div>
