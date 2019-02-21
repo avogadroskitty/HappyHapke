@@ -7,6 +7,7 @@ import os
 import tornado.ioloop
 import tornado.web
 import tornado.websocket
+import dill as pickle
 from argparse import ArgumentParser
 from matplotlib import rc
 from matplotlib.backends.backend_webagg_core import (
@@ -46,6 +47,8 @@ class HapkeHandler(tornado.web.RequestHandler):
   def get(self):
     if bool(int(self.get_argument('dl', 0))):
       self._handle_download()
+    elif bool(int(self.get_argument('cp', 0))):
+      self._download_checkpoint()
     else:
       self._init_program_state()
 
@@ -58,6 +61,23 @@ class HapkeHandler(tornado.web.RequestHandler):
     self.set_header('Content-Type', mimetype)
     self.set_header('Content-Disposition', 'attachment; filename=' + fname)
     self.write(data)
+    self.finish()
+
+#Function to support download of the data files
+  def _download_checkpoint(self):
+    buf_size = 4096
+    uid = self.get_argument('uid')
+    state = self.application.prog_states[uid]
+    self.set_header('Content-Type', 'text/plain')
+    self.set_header('Content-Disposition', 'attachment; filename=checkpoint.pkl')
+    with open('checkpoint.pkl', 'wb') as file:
+        pickle.dump(state, file)
+    with open('checkpoint.pkl', 'rb') as f:
+        while True:
+            data = f.read(buf_size)
+            if not data:
+                break
+            self.write(data)
     self.finish()
 
 #Initial state of the program that loads the entire page from the ui.html file
@@ -73,15 +93,25 @@ class HapkeHandler(tornado.web.RequestHandler):
 #On clicking "Run" from the website - the post is called, based on the argument it calls the function at runtime
   def post(self):
     #Gets the userid for the user running the program
+
     uid = self.get_argument('uid')
-    state = self.application.prog_states[uid]
     # collect arguments for this section - Changes based on section
     # Each section has a hidden variable in ui.html that holdds the value to be passed in the section variable
     # When the submit button is clicked - the input tags in html are sent to the server
     # These values can be received in python using the below line.
     section = self.get_argument('section')
+    state = self.application.prog_states[uid]
+    
     kwargs = self._collect_kwargs(ignored_keys=('uid', 'section'))
-    # run the section method
+    if 'lcp' in kwargs:
+        cpfile = kwargs.pop('lcp', None)
+        if cpfile:
+            #Load state from checkpoint and not from the current uid and replace the prog state.
+            state = pickle.load(cpfile)
+            if state:
+                self.application.prog_states[uid] = state
+
+        # run the section method    
     logging.info('Running %s: %r', section, kwargs)
     try:
       #Calling each function at run time
@@ -104,6 +134,8 @@ class HapkeHandler(tornado.web.RequestHandler):
     if dl_param:
       self.write('<a href="/?dl=1&uid=%s&p=%s" target="_blank">Download</a>' %
                  (uid, dl_param))
+      self.write('<a href="/?cp=1&uid=%s" target="_blank">Download Checkpoint</a>' %
+                 (uid))
     self.write('</div>')
     # initialize the figure managers
     fig_managers = self.application.fig_managers

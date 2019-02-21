@@ -83,9 +83,9 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                         if |&theta;<sub>i</sub> - &theta;<sub>e</sub>| &gt; 15.
                     </label>
                     <!-- <label>
-                      <input name='QE' type='number' step='any' value=1 />
-                      Extinction efficiency, set to 1 for closely-spaced particles.
-                    </label> -->
+                  <input name='QE' type='number' step='any' value=1 />
+                  Extinction efficiency, set to 1 for closely-spaced particles.
+                </label> -->
                 </div>
 
                 <div class='param_group'>
@@ -126,6 +126,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
         <form method='POST'>
             <section>
                 <div class='param_group'>
+                    <label>Load Checkpoint</label><input type='file' class="fileElement" name='lcp' />
                     <p>
                         Usable range of wavelengths (in microns).
                         Use the plots above to determine good cutoffs.
@@ -155,14 +156,14 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                         Polynomial order.
                     </label>
                     <label>
-                        <input name='idx_in' type='number' step=1 value=1 min=0 max=5>
+                        <input name='idx_in' type='number' step=1 value=3 min=0 max=5>
                         Initial Points to Fit
                     </label>
                 </div>
             </section>
 
             <input name='section' type='hidden' value='preprocess' />
-            <input type='submit' id='preprocess_submit' value='Run' disabled />
+            <input type='submit' id='preprocess_submit' value='Run' />
         </form>
         <div class='results'></div>
     </details>
@@ -179,6 +180,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
     <details>
         <summary><span class='heading'>Solve for <i>k</i> (All Input Files)</span></summary>
         <form method='POST'>
+            <label>Load Checkpoint</label><input type='file' class="fileElement" name='lcp' />
             <section>
                 <div class='param_group'>
                     <div id="guess_group" style="display:flex"></div>
@@ -187,7 +189,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
 
             <input name='key' type='hidden' value='file1' />
             <input name='section' type='hidden' value='solve_for_all_k' />
-            <input type='submit' value='Run' disabled />
+            <input type='submit' value='Run' />
         </form>
         <div class='results'></div>
     </details>
@@ -204,6 +206,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
     <details>
         <summary><span class='heading'>Solve for <i>k</i> (global)</span></summary>
         <form method='POST'>
+            <label>Load Checkpoint</label><input type='file' class="fileElement" name='lcp' />
             <section>
                 <div class='param_group'>
                     <p>Optimization Parameters</p>
@@ -235,7 +238,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
             </section>
 
             <input name='section' type='hidden' value='optimize_global_k' />
-            <input type='submit' value='Run' disabled />
+            <input type='submit' value='Run' />
         </form>
         <div class='results'></div>
     </details>
@@ -252,6 +255,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
     <details>
         <summary><span class='heading'>Add in MIR data</span></summary>
         <form method='POST' enctype='multipart/form-data'>
+            <label>Load Checkpoint</label><input type='file' class="fileElement" name='lcp' />
             <section>
                 <div class='param_group'>
                     <p>
@@ -276,7 +280,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
             </section>
 
             <input name='section' type='hidden' value='add_mir_data' />
-            <input type='submit' value='Run' disabled />
+            <input type='submit' value='Run' />
         </form>
         <div class='results'></div>
     </details>
@@ -293,6 +297,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
     <details>
         <summary><span class='heading'>Compute index of refraction (Kramers-Kronig)</span></summary>
         <form method='POST'>
+            <label>Load Checkpoint</label><input type='file' class="fileElement" name='lcp' />
             <section>
                 <div class='param_group'>
                     <p>Known variables</p>
@@ -304,7 +309,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
             </section>
 
             <input name='section' type='hidden' value='run_sskk' />
-            <input type='submit' value='Run' disabled />
+            <input type='submit' value='Run' />
         </form>
         <div class='results'></div>
     </details>
@@ -321,6 +326,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
     <details>
         <summary><span class='heading'>Optimize phase function parameters</span></summary>
         <form method='POST' enctype='multipart/form-data'>
+            <label>Load Checkpoint</label><input type='file' class="fileElement" name='lcp' />
             <section>
                 <div class='param_group'>
                     <p>Phase Files</p>
@@ -332,7 +338,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                 </div>
                 <div class='param_group'>
                     <label>
-                        Min Scale: <input name='minScale' type='number' step='any' value='0.01' min='0.01' max='9'/>
+                        Min Scale: <input name='minScale' type='number' step='any' value='0.01' min='0.01' max='9' />
                     </label>
 
                     <label>
@@ -383,16 +389,17 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                         </div>
 
                     </div>
-</section>
+            </section>
 
             <input name='section' type='hidden' value='phase_solver' />
-            <input type='submit' value='Run' disabled />
+            <input type='submit' value='Run' />
         </form>
         <div class='results'></div>
     </details>
 
     <script>
         var $options;
+
         $('#preprocess_submit').click(function () {
             $('#ddlGuessKey, #bounds_group, #guess_group, #addFilesPhase').empty();
             $(".fileElement").each(function (index) {

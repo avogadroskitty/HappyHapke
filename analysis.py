@@ -1066,8 +1066,8 @@ def solve_phase(phase_files, params):
 
     fig2, ax2 = plt.subplots(figsize=(8,6), frameon=False)
     for i in range(nfiles):
-        ax2.plot(wave, brc[i], ':r', label='RC-'+str(i+1))
         ax2.plot(wave, longphasedata[i], '-b', label='LPD-'+str(i+1))
+        ax2.plot(wave, brc[i], ':r', label='RC-'+str(i+1))
         plt_data.append(['RC-'+str(i+1), wave, brc[i]])
         plt_data.append(['LPD-'+str(i+1), wave, longphasedata[i]])
     ax2.set_xlabel('Wavelength')

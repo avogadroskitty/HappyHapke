@@ -8,7 +8,7 @@ from matplotlib.figure import Figure
 from matplotlib.ticker import MaxNLocator
 from zipfile import ZipFile
 import analysis
-from hapke_model import get_hapke_model
+from hapke_model import HapkeModel
 from phaseangle import PhaseAngleObj
 import pickle
 
@@ -19,11 +19,9 @@ class ProgramState(object):
     # HACK: use defaults if some/all files aren't provided
     specwave_file = specwave_file or '../data/specwave2.mat'
     calspec_file = calspec_file or '../data/calspecw2.mat'
-
-    # initialize the model
-    HapkeModel = get_hapke_model(phase_fn=phase_fn, scatter=scatter_type)
+    
     thetai, thetae = np.deg2rad([float(thetai), float(thetae)])
-    self.hapke_scalar = HapkeModel(thetai, thetae, float(n1), float(Bg))
+    self.hapke_scalar = HapkeModel(thetai, thetae, float(n1), float(Bg), phase_fn, scatter_type)
 
     self.spectra = {}
     self.Bg = Bg

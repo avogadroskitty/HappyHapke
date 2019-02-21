@@ -1,4 +1,4 @@
-var WebUI = function(host, uid) {
+var WebUI = function (host, uid) {
   var websocket_type = mpl.get_websocket_type();
   var keepalive = null;
   var all_figures = {};
@@ -12,7 +12,6 @@ var WebUI = function(host, uid) {
     var elt = $('#fig'+fignum);
     all_figures[fignum] = new mpl.figure(fignum, ws, savefig, elt);
   }
-
   function on_form_submit(evt) {
     evt.preventDefault();
     var form = $(this);
@@ -25,7 +24,7 @@ var WebUI = function(host, uid) {
       if (fig){ fig.ws.close(); }
     });
     var post_data = new FormData(this);
-    post_data.append('uid', uid);
+      post_data.append('uid', uid);
     // do $.load() manually, to use the FormData object
     $.ajax({
       url: '/',
@@ -72,6 +71,7 @@ var WebUI = function(host, uid) {
       all_figures = {};
     };
     // intercept form submission
-    $('form').submit(on_form_submit);
+      $('form').submit(on_form_submit);
+      
   };
 };
