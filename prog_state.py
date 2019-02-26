@@ -16,6 +16,8 @@ class ProgramState(object):
   def initialize(self, phase_fn='legendre', scatter_type='lambertian',
                  thetai=0, thetae=0, n1=0, Bg=0,
                  specwave_file='', calspec_file='', **kwargs):  
+    
+    plt.close('all')  # hack!
     # HACK: use defaults if some/all files aren't provided
     specwave_file = specwave_file or '../data/specwave2.mat'
     calspec_file = calspec_file or '../data/calspecw2.mat'
@@ -68,6 +70,8 @@ class ProgramState(object):
 
   #Corresponds to section 1 of Matlab code - Finding the lambda and fitting the polynomial curve
   def preprocess(self, low=0.32, high=2.55, UV=0, fit_order=1, idx_in=3):
+    
+    plt.close('all')  # hack!
     low, high, UV = float(low), float(high), float(UV)
     self.pp_bounds = (low, high, UV)
     fit_order = int(fit_order)
@@ -99,6 +103,8 @@ class ProgramState(object):
     return 'Preprocessing complete: ', 'pp', [fig]
 
   def solve_for_all_k(self, **kwargs):
+    
+    plt.close('all')  # hack!
     for i, key in enumerate(self.pp_spectra):
         for k,v in kwargs.items():
             if key in k.lower():
@@ -126,6 +132,8 @@ class ProgramState(object):
     return 'Solved for k: ', 'guessk', figures
 
   def optimize_global_k(self, guess_key='file2', opt_strategy='slow',lowk=0, upk=0, num_solns=1, **kwargs):
+    
+    plt.close('all')  # hack!
     #The previous step only approximates for a single grain size
     #Should we have guesses for all grain samples or only the ones we have approximated for?
     no_of_grain_samples = len(self.spectra)
