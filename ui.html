@@ -46,13 +46,13 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                         Wavelength units should be either nm or microns (not wavenumbers).
                     </p>
                     <div id='addFiles'>
-                        <label><input type='file' class="fileElement" name='file1' />VNIR spectrum - 1</label>
-                        <label><input type='file' class="fileElement" name='file2' />VNIR spectrum - 2</label>
-                        <label><input type='file' class="fileElement" name='file3' />VNIR spectrum - 3</label>
+                        <label class="inplbl"><input type='file' class="fileElement" name='file1' />VNIR spectrum - 1</label>
+                        <label class="inplbl"><input type='file' class="fileElement" name='file2' />VNIR spectrum - 2</label>
+                        <label class="inplbl"><input type='file' class="fileElement" name='file3' />VNIR spectrum - 3</label>
                     </div>
                     <span id='lnkAddMore'> Add More </span>
-                    <label><input type='file' name='specwave_file' />Calibration wavelength</label>
-                    <label><input type='file' name='calspec_file' />Calibration spectrum</label>
+                    <label class="inplbl"><input type='file' name='specwave_file' />Calibration wavelength</label>
+                    <label class="inplbl"><input type='file' name='calspec_file' />Calibration spectrum</label>
                 </div>
                 <script>
                     //Adding javascript for Section One
@@ -64,47 +64,55 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                 </script>
                 <div class='param_group'>
                     <p>Known variables</p>
-                    <label>
+                    <div class="inp">
+                        <label class="inplbl">
+                            Incident angle (&theta;<sub>i</sub>), in degrees.
+                        </label>
                         <input name='thetai' type='number' step='any' min='-90' max=90 value='-30' />
-                        Incident angle (&theta;<sub>i</sub>), in degrees.
-                    </label>
-                    <label>
+                    </div>
+                    <div class="inp">
+                        <label class="inplbl">
+                            Emission angle (&theta;<sub>e</sub>), in degrees.
+                        </label>
                         <input name='thetae' type='number' step='any' min='-90' max=90 value=0 />
-                        Emission angle (&theta;<sub>e</sub>), in degrees.
-                    </label>
-                    <label>
-                        <!-- <input name='n1' type='number' step='any' value='1.76575' /> -->
+                    </div>
+                    <div class="inp">
+                        <label class="inplbl">
+                            Average n, usually at the sodium D line.
+                        </label>
                         <input name='n1' type='number' step='any' value='1.5725' />
-                        Average n, usually at the sodium D line.
-                    </label>
-                    <label>
+                    </div>
+                    <div class="inp">
+                        <label class="inplbl">
+                            Opposition surge (B<sub>g</sub>), can be zero
+                            if |&theta;<sub>i</sub> - &theta;<sub>e</sub>| &gt; 15.
+                        </label>
                         <input type="checkbox" id="chkBg" name="Bg" value="Bg">
-                        Opposition surge (B<sub>g</sub>), can be zero
-                        if |&theta;<sub>i</sub> - &theta;<sub>e</sub>| &gt; 15.
-                    </label>
-                    <!-- <label>
-                  <input name='QE' type='number' step='any' value=1 />
-                  Extinction efficiency, set to 1 for closely-spaced particles.
-                </label> -->
+                    </div>
                 </div>
 
                 <div class='param_group'>
                     <p>Modeling choices</p>
-                    <label>
+                    <div class="inp">
+                        <label class="inplbl">
+                            Phase function
+                        </label>
                         <select id="ddlphase" name='phase_fn'>
                             <option value='legendre'>Legendre Polynomial</option>
                             <option value='dhg'>Double Heyney-Greenstein</option>
                             <option value='constant'>Constant (1)</option>
-                        </select> Phase function
-                    </label>
-                    <label>
+                        </select>
+                    </div>
+                    <div class="inp">
+                        <label class="inplbl">
+                            Scattering model
+                        </label>
                         <select name='scatter_type'>
                             <option value='isotropic'>Isotropic</option>
                             <option selected value='lambertian'>Lambertian</option>
-                        </select> Scattering model
-                    </label>
-                </div>
-            </section>
+                        </select>
+                    </div>
+        </section>
 
             <input name='section' type='hidden' value='initialize' />
             <input type='submit' value='Run' />
@@ -126,40 +134,49 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
         <form method='POST'>
             <section>
                 <div class='param_group'>
-                    <label>Load Checkpoint</label><input type='file' class="fileElement" name='lcp' />
                     <p>
                         Usable range of wavelengths (in microns).
                         Use the plots above to determine good cutoffs.
                     </p>
-                    <label>
-                        <!-- <input name='low' type='number' step='any' value='0.405' /> -->
+                    <div class="inp">
+                        <label class="inplbl">
+                            Lower bound of good region.
+                        </label>
                         <input name='low' type='number' step='any' value='0.32' />
-                        Lower bound of good region.
-                    </label>
-                    <label>
-                        <!-- <input name='high' type='number' step='any' value='2.451' /> -->
+                    </div>
+                    <div class="inp">
+                        <label class="inplbl">
+                            Upper bound of good region.
+                        </label>
                         <input name='high' type='number' step='any' value='2.550' />
-                        Upper bound of good region.
-                    </label>
-                    <label>
-                        <!-- <input name='UV' type='number' step='any' value='0.301' /> -->
-                        <input name='UV' type='number' step='any' value='0.3' />
-                        Lower bound after extrapolating the cropped spectrum.
-                    </label>
-                </div>
+                    </div>
 
+                    <div class="inp">
+                        <label class="inplbl">
+                            Lower bound after extrapolating the cropped spectrum.
+                        </label>
+                        <input name='UV' type='number' step='any' value='0.30' />
+                    </div>
+                </div>
                 <div class='param_group'>
                     <p>Interpolation options</p>
-                    <label>
-                        <!-- <input name='fit_order' type='number' step=1 value=0 min=0 max=5> -->
+
+                    <div class="inp">
+                        <label class="inplbl">
+                            Polynomial order.
+                        </label>
                         <input name='fit_order' type='number' step=1 value=1 min=0 max=5>
-                        Polynomial order.
-                    </label>
-                    <label>
+                    </div>
+
+                    <div class="inp">
+                        <label class="inplbl">
+                            Initial Points to Fit
+                        </label>
                         <input name='idx_in' type='number' step=1 value=3 min=0 max=5>
-                        Initial Points to Fit
-                    </label>
+                    </div>
                 </div>
+
+
             </section>
 
             <input name='section' type='hidden' value='preprocess' />
@@ -207,63 +224,72 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
         <summary><span class='heading'>Solve for <i>k</i> (global)</span></summary>
         <form method='POST'>
             <label>Load Checkpoint</label><input type='file' class="fileElement" name='lcp' />
-            <section>
-                <div class='param_group'>
-                    <p>Optimization Parameters</p>
-                    <label>
-                        <select id="ddlGuessKey" name='guess_key'></select>
-                        Previous section to take the initial guess for k from.
-                    </label>
-                    <label>
-                        <input name='lowk' type='number' step='any' value='1e-8' />
-                        <input name='upk' type='number' step='any' value='0.1' />
-                        Lower/upper bounds for each value in k.
-                    </label>
-                    <br>
-                    <label>
-                        <input name='num_solns' type='number' step='1' min='1' value='1' />
-                        <div>
-                            <p> MINIMIZATION PARAMETERS</p>
-                            <div>
-                                <div>
-                                    <label>
-                                        Max Function Evaluations D1: <input name='maxfun' type='number' value='1000' />
-                                    </label>
-                                </div>
-                                <div>
-                                    <label>
-                                        Function Tolerance (smaller is closer match): <input name='funtol' type='number' value='0.00000000000001' />
-                                    </label>
-                                </div>
-                                <div>
-                                    <label>
-                                        X Tolerance: <input name='xtol' type='number' value='0.000000001' step="any" />
-                                    </label>
-                                </div>
-                                <div>
-                                    <label>
-                                        Start Points: <input name='spts' type='number' step='1' value='5' />
-                                    </label>
-                                </div>
-                                <div>
-                                    <label>
-                                        Diff step: <input name='diff_step' type='number' step='any' value='0.000001' />
-                                    </label>
-                                </div>
-                            </div>
+                                          <section>
+                                              <div class='param_group'>
+                                                  <div id="boundnote">
+                                                      <i> Note: The bounds for Henyey Greenstein Function - 0 <= b <= 1, 0 <= c <= 1. <br /> The bounds for Legendre Function - -1.7 <= b <= 1.7, -1 <= c <= 2</i>
+                                                  </div>
 
-                        </div>
-                    </label>
-                </div>
+                                                  <div id="bounds_group"></div>
+                                              </div>
+                                              <div class='param_group'>
+                                                  <p>Optimization Parameters</p>
 
-                <div class='param_group'>
-                    <div id="boundnote">
-                        <p><i> Note: The bounds for Henyey Greenstein Function - 0 <= b <= 1, 0 <= c <= 1. <br /> The bounds for Legendre Function - -1.7 <= b <= 1.7, -1 <= c <= 2</i></p>
-                    </div>
+                                                  <div class="inp">
+                                                      <label class="inplbl">
+                                                          Previous section to take the initial guess for k from.
+                                                      </label>
+                                                      <select id="ddlGuessKey" name='guess_key'></select>
+                                                  </div>
 
-                    <div id="bounds_group"></div>
-                </div>
-            </section>
+                                                  <div class="inp">
+                                                      <label class="inplbl">
+                                                          Lower/upper bounds for each value in k.
+                                                      </label>
+                                                      <input name='lowk' type='number' step='any' value='1e-8' />
+                                                      <input name='upk' type='number' step='any' value='0.1' />
+                                                  </div>
+                                              </div>
+                                              <div class='param_group'>
+
+                                                  <div>
+                                                      <p> MINIMIZATION PARAMETERS</p>
+                                                      <div>
+                                                          <div class="inp">
+                                                              <label class="inplbl">
+                                                                  Max Function Evaluations D1:
+                                                              </label>
+                                                              <input name='maxfun' type='number' value='1000' />
+                                                          </div>
+                                                          <div class="inp">
+                                                              <label class="inplbl">
+                                                                  Function Tolerance (smaller is closer match):
+                                                              </label>
+                                                              <input name='funtol' type='number' value='0.0000000001' />
+                                                          </div>
+                                                          <div class="inp">
+                                                              <label class="inplbl">
+                                                                  X Tolerance:
+                                                              </label>
+                                                              <input name='xtol' type='number' value='0.000000001' step="any" />
+                                                          </div>
+                                                          <div class="inp">
+                                                              <label class="inplbl">
+                                                                  Start Points:
+                                                              </label>
+                                                              <input name='spts' type='number' step='1' value='5' />
+                                                          </div>
+                                                          <div class="inp">
+                                                              <label class="inplbl">
+                                                                  Diff step:
+                                                              </label>
+                                                              <input name='diff_step' type='number' step='any' value='0.000001' />
+                                                          </div>
+                                                      </div>
+                                                  </div>
+                                              </div>
+
+                                          </section>
 
             <input name='section' type='hidden' value='optimize_global_k' />
             <input type='submit' value='Run' />
@@ -290,10 +316,14 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                         Matlab MAT-files containing a single matrix each.
                         Wavelength units should be either nm or microns (not wavenumbers).
                     </p>
-                    <label><input type='file' name='mirv_file' />MIR wavelength (v)</label>
-                    <label><input type='file' name='mirk_file' />MIR dispersion (k)</label>
-                    <label>
-                        Adjustment Type:
+                    <label class="inplbl"><input type='file' name='mirv_file' />MIR wavelength (v)</label>
+                    <label class="inplbl"><input type='file' name='mirk_file' />MIR dispersion (k)</label>
+
+                    <div class="inp">
+                        <label class="inplbl">
+                            Adjustment Type:
+                        </label>
+
                         <select name='adjType'>
                             <option value='0'>None (Bridge gap with Line)</option>
                             <option value='1'>Asymmetric (Scales VNIR side of MIR k)</option>
@@ -301,11 +331,11 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                             <option value='3'>Cheng's Min/Max Adjustment</option>
                             <option value='4' selected> No MIR data </option>
                         </select>
-                    </label>
-                    <br />
-                    <i>If you don't have MIR data, in Adjustment Type - use option <b> No MIR data</b> </i>
+                    </div>
+                        <br />
+                        <i>If you don't have MIR data, in Adjustment Type - use option <b> No MIR data</b> </i>
                 </div>
-            </section>
+</section>
 
             <input name='section' type='hidden' value='add_mir_data' />
             <input type='submit' value='Run' />
@@ -327,12 +357,12 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
         <form method='POST'>
             <label>Load Checkpoint</label><input type='file' class="fileElement" name='lcp' />
             <section>
-                <div class='param_group'>
+                <div class='param_group inp'>
                     <p>Known variables</p>
-                    <label>
-                        <input name='anchor' type='number' step='any' value='0.58929' />
+                    <label class="inplbl">
                         Anchor wavelength, at which the average n (above) was determined.
                     </label>
+                    <input name='anchor' type='number' step='any' value='0.58929' />
                 </div>
             </section>
 
@@ -358,67 +388,94 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
             <section>
                 <div class='param_group'>
                     <p>Phase Files</p>
-                    <label>
-                        Phase Angle Count: <input name='phaseAngleCount' id="phaseAngleCount" type='number' step='1' value='1' min='1' />
+
+                    <div class="inp">
+                        <label class="inplbl">
+                            Phase Angle Count:
+                        </label> 
+                        <input name='phaseAngleCount' id="phaseAngleCount" type='number' step='1' value='1' min='1' />
                         <span id="AddPhaseCount" /> Add Phase Angles </span>
-                    </label>
+                    </div>
                     <div id='addFilesPhase'></div>
-                </div>
+                    </div>
                 <div class='param_group'>
-                    <label>
-                        Min Scale: <input name='minScale' type='number' step='any' value='0.01' min='0.01' max='9' />
-                    </label>
-
-                    <label>
-                        Max Scale: <input name='maxScale' type='number' step='any' value='10' min='0.011' max='10' />
-                    </label>
-
-                    <label>
-                        Min Offset: <input name='minOffset' type='number' step='any' value='-0.000000008' min="-0.00000008" max="0.0009" />
-                    </label>
-
-                    <label>
-                        Max Offset: <input name='maxOffset' type='number' step='any' value='0.001' min='-0.000000007' max="0.001" />
-                    </label>
-
                     <div>
-                        <p> MINIMIZATION PARAMETERS</p>
+                        <p>Parameters Affecting k</p>
+                        <div class="inp">
+                            <label class="inplbl">
+                                Min Scale:
+                            </label>
+                            <input name='minScale' type='number' step='any' value='0.01' min='0.01' max='9' />
+                        </div>
+
+
+                        <div class="inp">
+                            <label class="inplbl">
+                                Max Scale:
+                            </label>
+                            <input name='maxScale' type='number' step='any' value='10' min='0.011' max='10' />
+                        </div>
+
+
+                        <div class="inp">
+                            <label class="inplbl">
+                                Min Offset:
+                            </label>
+                            <input name='minOffset' type='number' step='any' value='-0.000000008' min="-0.00000008" max="0.0009" />
+                        </div>
+
+
+                        <div class="inp">
+                            <label class="inplbl">
+                                Max Offset:
+                            </label>
+                            <input name='maxOffset' type='number' step='any' value='0.001' min='-0.000000007' max="0.001" />
+                        </div>
+                    </div>
+                    <div>
+                        <p> Minimization Parameters</p>
                         <div>
-                            <div>
-                                <label>
-                                    Max Function Evaluations D1: <input name='maxfun' type='number' value='1000' />
+                            <div class="inp">
+                                <label class="inplbl">
+                                    Max Function Evaluations D1:
                                 </label>
+                                <input name='maxfun' type='number' value='1000' />
                             </div>
-                            <div>
-                                <label>
-                                    Function Tolerance (smaller is closer match): <input name='funtol' type='number' value='0.00000000000001' />
+                            <div class="inp">
+                                <label class="inplbl">
+                                    Function Tolerance (smaller is closer match):
                                 </label>
+                                <input name='funtol' type='number' value='0.00000000000001' />
                             </div>
-                            <div>
-                                <label>
-                                    X Tolerance: <input name='xtol' type='number' value='0.000000001' step="any" />
+                            <div class="inp">
+                                <label class="inplbl">
+                                    X Tolerance:
                                 </label>
-                            </div> 
-                            <div>
-                                <label>
-                                    Start Points: <input name='spts' type='number' step='1' value='5' />
-                                </label>
+                                <input name='xtol' type='number' value='0.000000001' step="any" />
                             </div>
-                            <div> 
-                                <label>
-                                    Fit Order: <input name='fit_order' type='number' step='1' value='1' />
+                            <div class="inp">
+                                <label class="inplbl">
+                                    Start Points:
                                 </label>
+                                <input name='spts' type='number' step='1' value='5' />
+                            </div>
+                            <div class="inp">
+                                <label class="inplbl">
+                                    Fit Order:
+                                </label>
+                                <input name='fit_order' type='number' step='1' value='1' />
                             </div>
 
                             <div>
-                                <label>
-                                    Diff step: <input name='diff_step' type='number' step='any' value='0.000001' />
+                                <label class="inplbl">
+                                    Diff step:
                                 </label>
+                                <input name='diff_step' type='number' step='any' value='0.000001' />
                             </div>
                         </div>
 
                     </div>
-            </section>
+</section>
 
             <input name='section' type='hidden' value='phase_solver' />
             <input type='submit' value='Run' />
@@ -465,17 +522,17 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                     if (bgcheck) {
                         global_bgmin = '<div>' +
                             '<p>B0:</p>' +
-                            '<label>Lower Bounds: <input name="lowb0' + elementName + '"" type="number" step="any" value="0" /></label>' +
-                            '<label>Upper Bounds:<input name="upb0' + elementName + '"" type="number" step="any" value="2" /></label>' +
+                            '<div class="inp"><label class="inplbl">Lower Bounds:</label> <input name="lowb0' + elementName + '"" type="number" step="any" value="0" /></div>' +
+                            '<div class="inp"><label class="inplbl">Upper Bounds:</label> <input name="upb0' + elementName + '"" type="number" step="any" value="2" /></div>' +
                             '</div>' +
                             '<div>' +
                             '<p>h:</p>' +
-                            '<label>Lower Bounds: <input name="lowh' + elementName + '"" type="number" step="any" value="0.00001" /></label>' +
-                            '<label>Upper Bounds:<input name="uph' + elementName + '"" type="number" step="any" value="0.9" /></label>' +
+                            '<div class="inp"><label class="inplbl">Lower Bounds:</label> <input name="lowh' + elementName + '"" type="number" step="any" value="0.00001" /></div>' +
+                            '<div class="inp"><label class="inplbl">Upper Bounds:</label> <input name="uph' + elementName + '"" type="number" step="any" value="0.9" /></div>' +
                             '</div>';      
 
-                        local_bgmin = '<label> B0: <input name = "b0_' + elementName + '" type = "number" step = "any" value = "0" /></label >' +
-                            '<label> h: <input name = "h_' + elementName + '" type = "number" step = "any" value = "0.2" /></label >';
+                        local_bgmin = ' <div class="inp"><label class="inplbl"> B0:</label >  <input name = "b0_' + elementName + '" type = "number" step = "any" value = "0" /></div>' +
+                            '<div class="inp"><label class="inplbl"> h: </label > <input name = "h_' + elementName + '" type = "number" step = "any" value = "0.2" /></div>';
 
                         phase_bgmin = '<div class="pggdiv">' +
                             '<p class="pgg_p">B0:</p>' +
@@ -492,11 +549,11 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
 
                     }
                     $('#guess_group').append('<div class="guess_grain_group" ><h3 class="param_grain_head" id="guesshead_' + index + '"></h3>' +
-                        '<label> Coeff. b: <input name = "b_' + elementName +'" type = "number" step = "any" value = "0.1" /></label >' +
-                        '<label> Coeff. c: <input name = "c_' + elementName +'" type = "number" step = "any" value = "0.3" /></label >' +
-                        '<label> Filling Factor: <input name = "ff_' + elementName +'" type = "number" step = "any" value = "0.000000001" /></label >' +
-                        '<label> Internal Scattering (s): <input name = "s_' + elementName +'" type = "number" step = "any" value = "0" /></label >' +
-                        '<label> Grain Size (D): <input name = "D_' + elementName + '" type = "number" step = "any" value = "63" /></label >' +
+                        '<div class="inp"><label class="inplbl"> Coeff. b:</label >  <input name = "b_' + elementName +'" type = "number" step = "any" value = "0.1" /></div>' +
+                        '<div class="inp"><label class="inplbl"> Coeff. c: </label > <input name = "c_' + elementName +'" type = "number" step = "any" value = "0.3" /></div>' +
+                        '<div class="inp"><label class="inplbl"> Filling Factor: </label > <input name = "ff_' + elementName +'" type = "number" step = "any" value = "0.000000001" /></div>' +
+                        '<div class="inp"><label class="inplbl"> Internal Scattering (s):</label > <input name = "s_' + elementName +'" type = "number" step = "any" value = "0" /></div>' +
+                        '<div class="inp"><label class="inplbl"> Grain Size (D): </label ><input name = "D_' + elementName + '" type = "number" step = "any" value = "63" /></div>' +
                         local_bgmin+
                         '</div>');
 
@@ -504,13 +561,13 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                         $('#boundnote').show();                      
                         
                         bcmin = '<p>Coefficient b of ' + phasefn + ' polynomial:</p>' +
-                            '<label>Lower Bounds: <input name="lowb' + elementName + '"" type="number" step="any" value="-1.7" /></label>' +
-                            '<label>Upper Bounds:<input name="upb' + elementName + '"" type="number" step="any" value="1.7" /></label>' +
+                            '<div class="inp"><label class="inplbl">Lower Bounds:</label> <input name="lowb' + elementName + '"" type="number" step="any" value="-1.7" /></div>' +
+                            '<div class="inp"><label class="inplbl">Upper Bounds:</label> <input name="upb' + elementName + '"" type="number" step="any" value="1.7" /></div>' +
                             '</div>' +
                             '<div>' +
                             '<p>Coefficient c of ' + phasefn + ' polynomial:</p>' +
-                            '<label>Lower Bounds: <input name="lowc' + elementName + '"" type="number" step="any" value="-1.0" /></label>' +
-                            '<label>Upper Bounds:<input name="upc' + elementName + '"" type="number" step="any" value="1.0" /></label>' +
+                            '<div class="inp"><label class="inplbl">Lower Bounds:</label><input name="lowc' + elementName + '"" type="number" step="any" value="-1.0" /></div>' +
+                            '<div class="inp"><label class="inplbl">Upper Bounds:</label><input name="upc' + elementName + '"" type="number" step="any" value="1.0" /></div>' +
                             '</div>' ;
                     }
                     else {
@@ -521,13 +578,13 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                         '<div>' + bcmin +
                         '<div>' +
                         '<p>Internal Scattering:</p>' +
-                        '<label>Lower Bounds: <input name="lows' + elementName + '"" type="number" step="any" value="0" /></label>' +
-                        '<label>Upper Bounds:<input name="ups' + elementName + '"" type="number" step="any" value="0.06" /></label>' +
+                        '<div class="inp"><label class="inplbl">Lower Bounds:</label> <input name="lows' + elementName + '"" type="number" step="any" value="0" /></div>' +
+                        '<div class="inp"><label class="inplbl">Upper Bounds:</label><input name="ups' + elementName + '"" type="number" step="any" value="0.06" /></div>' +
                         '</div>' +
                         '<div>' +
                         '<p>Grain Size:</p>' +
-                        '<label>Lower Bounds: <input name="lowD' + elementName + '"" type="number" step="any" value="' + grain_lb + '" /></label>' +
-                        '<label>Upper Bounds:<input name="upD' + elementName + '"" type="number" step="any" value="' + grain_ub + '" /></label>' +
+                        '<div class="inp"><label class="inplbl">Lower Bounds:</label><input name="lowD' + elementName + '"" type="number" step="any" value="' + grain_lb + '" /></div>' +
+                        '<div class="inp"><label class="inplbl">Upper Bounds:</label><input name="upD' + elementName + '"" type="number" step="any" value="' + grain_ub + '" /></div>' +
                         '</div>' + global_bgmin +
                         '</div>');
 
@@ -590,9 +647,6 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
         }); //Preprocess submit end
 
         //Adding javascript for Section Phase Angle 
-        
-
-        
     </script>
 
 </body>

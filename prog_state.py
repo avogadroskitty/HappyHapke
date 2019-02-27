@@ -381,7 +381,7 @@ class ProgramState(object):
       low, high, UV = self.pp_bounds
       vislam, visn = self.vislam, self.visn
       wavelength = self.pp_spectra['file2'][:,0] 
-      params = (lstart2, lend2, low, UV, lamdiff, float(minScale), float(maxScale), float(minOffset), float(maxOffset), int(maxfun), float(funtol), float(xtol), int(spts), float(diff_step)
+      params = (lstart2, lend2, low, UV, lamdiff, float(minScale), float(maxScale), float(minOffset), float(maxOffset), int(maxfun), float(funtol), float(xtol), int(spts), float(diff_step),
                 vislam, visn, wavelength, k, int(fit_order), int(phaseAngleCount), phaseGrainList, phase_bcsd, ffs, self.hapke_vector_isow)
 
       plt_data = analysis.solve_phase(self.phases, params)

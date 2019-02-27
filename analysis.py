@@ -773,7 +773,7 @@ def MasterSSKK(kset, anchor, iter, wavelength, n1, lstart, lend):
 
 def solve_phase(phase_files, params):
     
-    (lstart2, lend2, low, UV, lamdiff, minScale, maxScale, minOffset, maxOffset, maxfun, funtol, xtol, spts, diff_step
+    (lstart2, lend2, low, UV, lamdiff, minScale, maxScale, minOffset, maxOffset, maxfun, funtol, xtol, spts, diff_step,
      vislam, visn, wavelength, k, fit_order, phaseAngleCount, phaseGrainList, phase_bcsd, ffs, hapke) = params
 
     phase_file_key_list = range(phaseAngleCount)
