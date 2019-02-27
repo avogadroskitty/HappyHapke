@@ -78,7 +78,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                         Average n, usually at the sodium D line.
                     </label>
                     <label>
-                        <input name='Bg' type='number' step='any' value=0 />
+                        <input type="checkbox" id="chkBg" name="Bg" value="Bg">
                         Opposition surge (B<sub>g</sub>), can be zero
                         if |&theta;<sub>i</sub> - &theta;<sub>e</sub>| &gt; 15.
                     </label>
@@ -91,7 +91,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                 <div class='param_group'>
                     <p>Modeling choices</p>
                     <label>
-                        <select name='phase_fn'>
+                        <select id="ddlphase" name='phase_fn'>
                             <option value='legendre'>Legendre Polynomial</option>
                             <option value='dhg'>Double Heyney-Greenstein</option>
                             <option value='constant'>Constant (1)</option>
@@ -222,17 +222,45 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                     <br>
                     <label>
                         <input name='num_solns' type='number' step='1' min='1' value='1' />
-                        <span class='opt_strat_desc'>
-                            Number of iterations to perform (each one takes ~30 seconds).
-                        </span>
-                        <span class='opt_strat_desc' style='display:none;'>
-                            Number of random start points to initialize with.
-                        </span>
+                        <div>
+                            <p> MINIMIZATION PARAMETERS</p>
+                            <div>
+                                <div>
+                                    <label>
+                                        Max Function Evaluations D1: <input name='maxfun' type='number' value='1000' />
+                                    </label>
+                                </div>
+                                <div>
+                                    <label>
+                                        Function Tolerance (smaller is closer match): <input name='funtol' type='number' value='0.00000000000001' />
+                                    </label>
+                                </div>
+                                <div>
+                                    <label>
+                                        X Tolerance: <input name='xtol' type='number' value='0.000000001' step="any" />
+                                    </label>
+                                </div>
+                                <div>
+                                    <label>
+                                        Start Points: <input name='spts' type='number' step='1' value='5' />
+                                    </label>
+                                </div>
+                                <div>
+                                    <label>
+                                        Diff step: <input name='diff_step' type='number' step='any' value='0.000001' />
+                                    </label>
+                                </div>
+                            </div>
+
+                        </div>
                     </label>
                 </div>
 
                 <div class='param_group'>
-                    <p>Bounds on Hapke parameters for small, medium, and large grain sizes.</p>
+                    <div id="boundnote">
+                        <p><i> Note: The bounds for Henyey Greenstein Function - 0 <= b <= 1, 0 <= c <= 1. <br /> The bounds for Legendre Function - -1.7 <= b <= 1.7, -1 <= c <= 2</i></p>
+                    </div>
+
                     <div id="bounds_group"></div>
                 </div>
             </section>
@@ -358,7 +386,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                         <div>
                             <div>
                                 <label>
-                                    Max Function Evaluations D1: <input name='maxfun' type='number' value='10000000000' />
+                                    Max Function Evaluations D1: <input name='maxfun' type='number' value='1000' />
                                 </label>
                             </div>
                             <div>
@@ -370,20 +398,21 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                                 <label>
                                     X Tolerance: <input name='xtol' type='number' value='0.000000001' step="any" />
                                 </label>
-                            </div>
-                            <div>
-                                <label>
-                                    Maximum Iterations: <input name='maxit' type='number' value='100' />
-                                </label>
-                            </div>
+                            </div> 
                             <div>
                                 <label>
                                     Start Points: <input name='spts' type='number' step='1' value='5' />
                                 </label>
                             </div>
-                            <div>
+                            <div> 
                                 <label>
                                     Fit Order: <input name='fit_order' type='number' step='1' value='1' />
+                                </label>
+                            </div>
+
+                            <div>
+                                <label>
+                                    Diff step: <input name='diff_step' type='number' step='any' value='0.000001' />
                                 </label>
                             </div>
                         </div>
@@ -401,7 +430,10 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
         var $options;
 
         $('#preprocess_submit').click(function () {
+            var phase = $("#ddlphase").val();
+            var phasefn = phase == "dhg" ? "Double Heyney-Greenstein" : phase == "legendre" ? "Legendre" : "Constant";
             $('#ddlGuessKey, #bounds_group, #guess_group, #addFilesPhase').empty();
+            var bgcheck = $('#chkBg').prop("checked");
             $(".fileElement").each(function (index) {
                 
                 grain_lb = 0;
@@ -426,25 +458,67 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                 //Checks if the variable fileAdded is not an empty string
                 if (fileAdded) { 
                     $("#ddlGuessKey").append('<option value="' + elementName + '">' + elementName + '</option>');
+                    var local_bgmin = '';
+                    var global_bgmin = '';
+                    var phase_bgmin = '';
+                    var bcmin = '';
+                    if (bgcheck) {
+                        global_bgmin = '<div>' +
+                            '<p>B0:</p>' +
+                            '<label>Lower Bounds: <input name="lowb0' + elementName + '"" type="number" step="any" value="0" /></label>' +
+                            '<label>Upper Bounds:<input name="upb0' + elementName + '"" type="number" step="any" value="2" /></label>' +
+                            '</div>' +
+                            '<div>' +
+                            '<p>h:</p>' +
+                            '<label>Lower Bounds: <input name="lowh' + elementName + '"" type="number" step="any" value="0.00001" /></label>' +
+                            '<label>Upper Bounds:<input name="uph' + elementName + '"" type="number" step="any" value="0.9" /></label>' +
+                            '</div>';      
 
+                        local_bgmin = '<label> B0: <input name = "b0_' + elementName + '" type = "number" step = "any" value = "0" /></label >' +
+                            '<label> h: <input name = "h_' + elementName + '" type = "number" step = "any" value = "0.2" /></label >';
+
+                        phase_bgmin = '<div class="pggdiv">' +
+                            '<p class="pgg_p">B0:</p>' +
+                            '<label>Lower Bounds:</label><input name="plb_b0_' + index + '"" type="number" step="any" value="0" />' +
+                            '<label>Upper Bounds:<input name="pub_b0_' + index + '"" type="number" step="any" value="2" />' +
+                            '<label>Guess:</label><input name = "p_b0_' + index + '" type = "number" step = "any" value = "1" />' +
+                            '</div>' +
+                            '<div class="pggdiv">' +
+                            '<p class="pgg_p">h:</p>' +
+                            '<label>Lower Bounds:</label><input name="plb_h_' + index + '"" type="number" step="any" value="0.00001" />' +
+                            '<label>Upper Bounds:</label><input name="pub_h_' + index + '"" type="number" step="any" value="0.9" />' +
+                            '<label>Guess:</label><input name = "p_h_' + index + '" type = "number" step = "any" value = "0.02" />' +
+                            '</div>';
+
+                    }
                     $('#guess_group').append('<div class="guess_grain_group" ><h3 class="param_grain_head" id="guesshead_' + index + '"></h3>' +
-                        '<label> Coeff. B: <input name = "b_' + elementName +'" type = "number" step = "any" value = "0.1" /></label >' +
-                        '<label> Coeff. C: <input name = "c_' + elementName +'" type = "number" step = "any" value = "0.3" /></label >' +
+                        '<label> Coeff. b: <input name = "b_' + elementName +'" type = "number" step = "any" value = "0.1" /></label >' +
+                        '<label> Coeff. c: <input name = "c_' + elementName +'" type = "number" step = "any" value = "0.3" /></label >' +
                         '<label> Filling Factor: <input name = "ff_' + elementName +'" type = "number" step = "any" value = "0.000000001" /></label >' +
-                        '<label> Internal Scattering: <input name = "s_' + elementName +'" type = "number" step = "any" value = "0" /></label >' +
-                        '<label> Grain Size: <input name = "D_' + elementName +'" type = "number" step = "any" value = "63" /></label >' +
+                        '<label> Internal Scattering (s): <input name = "s_' + elementName +'" type = "number" step = "any" value = "0" /></label >' +
+                        '<label> Grain Size (D): <input name = "D_' + elementName + '" type = "number" step = "any" value = "63" /></label >' +
+                        local_bgmin+
                         '</div>');
+
+                    if (phasefn != "Constant") {
+                        $('#boundnote').show();                      
+                        
+                        bcmin = '<p>Coefficient b of ' + phasefn + ' polynomial:</p>' +
+                            '<label>Lower Bounds: <input name="lowb' + elementName + '"" type="number" step="any" value="-1.7" /></label>' +
+                            '<label>Upper Bounds:<input name="upb' + elementName + '"" type="number" step="any" value="1.7" /></label>' +
+                            '</div>' +
+                            '<div>' +
+                            '<p>Coefficient c of ' + phasefn + ' polynomial:</p>' +
+                            '<label>Lower Bounds: <input name="lowc' + elementName + '"" type="number" step="any" value="-1.0" /></label>' +
+                            '<label>Upper Bounds:<input name="upc' + elementName + '"" type="number" step="any" value="1.0" /></label>' +
+                            '</div>' ;
+                    }
+                    else {
+                        $('#boundnote').hide();
+                    }
+
                     $("#bounds_group").append('<div class="grain_group" style="display:flex"><h3 class="param_grain_head" id="head_' + index + '"></h3>' +
-                        '<div>' +
-                        '<p>Coefficient b of Legendre polynomial:</p>' +
-                        '<label>Lower Bounds: <input name="lowb' + elementName + '"" type="number" step="any" value="-1.7" /></label>' +
-                        '<label>Upper Bounds:<input name="upb' + elementName + '"" type="number" step="any" value="1.7" /></label>' +
-                        '</div>' +
-                        '<div>' +
-                        '<p>Coefficient c of Legendre polynomial:</p>' +
-                        '<label>Lower Bounds: <input name="lowc' + elementName + '"" type="number" step="any" value="-1.0" /></label>' +
-                        '<label>Upper Bounds:<input name="upc' + elementName + '"" type="number" step="any" value="1.0" /></label>' +
-                        '</div>' +
+                        '<div>' + bcmin +
                         '<div>' +
                         '<p>Internal Scattering:</p>' +
                         '<label>Lower Bounds: <input name="lows' + elementName + '"" type="number" step="any" value="0" /></label>' +
@@ -454,35 +528,36 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                         '<p>Grain Size:</p>' +
                         '<label>Lower Bounds: <input name="lowD' + elementName + '"" type="number" step="any" value="' + grain_lb + '" /></label>' +
                         '<label>Upper Bounds:<input name="upD' + elementName + '"" type="number" step="any" value="' + grain_ub + '" /></label>' +
-                        '</div>' +
+                        '</div>' + global_bgmin +
                         '</div>');
 
                     $('#addFilesPhase').append('<div class="pfilesecs" id="pfilesec_' + index + '">' + '<h3 class="param_pfile_head" id="pfile_' + index + '"></h3>' +
                         '<span class="p_grain_group" style="display:flex">' +
                         '<div class="pggdiv">' +
-                        '<p class="pgg_p">Coeff. B:</p>' +
+                        '<p class="pgg_p">Coeff. b:</p>' +
                         '<label>Lower Bounds:</label><input name="plb_b_' + index + '"" type="number" step="any" value="-1.7" />' +
                         '<label>Upper Bounds:</label><input name="pub_b_' + index + '"" type="number" step="any" value="1.7" />' +
                         '<label>Guess:</label ><input name = "p_b_' + index + '" type = "number" step = "any" value = "0.1" />' +
                         '</div>' +
                         '<div class="pggdiv">' +
-                        '<p class="pgg_p">Coeff C:</p>' + 
+                        '<p class="pgg_p">Coeff c:</p>' + 
                         '<label>Lower Bounds:</label><input name="plb_c_' + index + '"" type="number" step="any" value="-1.0" />' +
                         '<label>Upper Bounds:</label><input name="pub_c_' + index + '"" type="number" step="any" value="1.0" />' +
                         '<label>Guess:</label ><input name = "p_c_' + index + '" type = "number" step = "any" value = "0.3" />' +
                         '</div>' +
                         '<div class="pggdiv">' +
-                        '<p class="pgg_p">Scat. S:</p>' +
+                        '<p class="pgg_p">Scat. s:</p>' +
                         '<label>Lower Bounds:</label><input name="plb_s_' + index + '"" type="number" step="any" value="0" />' +
                         '<label>Upper Bounds:<input name="pub_s_' + index + '"" type="number" step="any" value="0.06" />' +
                         '<label>Guess:</label><input name = "p_s_' + index + '" type = "number" step = "any" value = "0" />' +
                         '</div>' +
                         '<div class="pggdiv">' +
-                        '<p class="pgg_p">Grain Size:</p>' +
+                        '<p class="pgg_p">Grain Size (D):</p>' +
                         '<label>Lower Bounds:</label><input name="plb_d_' + index + '"" type="number" step="any" value="' + grain_lb + '" />' +
                         '<label>Upper Bounds:</label><input name="pub_d_' + index + '"" type="number" step="any" value="' + grain_ub + '" />' +
                         '<label>Guess:</label><input name = "p_d_' + index + '" type = "number" step = "any" value = "63" />' +
                         '</div>' +
+                        phase_bgmin +
                         '</span>');
 
                     $('#pfile_' + index).text(elementName + ":" + fileAdded);

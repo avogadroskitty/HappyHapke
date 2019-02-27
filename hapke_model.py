@@ -4,20 +4,22 @@ import numpy as np
 
 class HapkeModel(object):
   def __init__(self, incident_angle, emission_angle, refraction_index,
-               opposition_surge, phase_mixing, scatter_mixing):
+               needs_bg, phase_mixing, scatter_mixing):
+    # These angles are already in radians
     self._init_angles(incident_angle, emission_angle)
     self._init_refraction(refraction_index)
-    # later calculations need B(g) + 1
-    self.Bg1 = opposition_surge + 1
+    # old: B(g) + 1 | New: Added backscatter function
+    self.needs_bg = needs_bg
     self.n1 = refraction_index
     self.phase_mixing = phase_mixing
     self.scatter_mixing = scatter_mixing
     self.needs_isow = False if scatter_mixing == 'lambertian' else True 
 
   def _init_angles(self, thetai, thetae):
-    thetai = np.asarray(thetai)
-    thetae = np.asarray(thetae)
-    self.cosg = np.cos(np.abs(thetae - thetai))
+    self.thetai = np.asarray(thetai)
+    self.thetae = np.asarray(thetae)
+    self.g = np.abs(thetae) + np.abs(thetai)
+    self.cosg = np.cos(self.g)
     self.u0 = np.cos(thetai)
     self.u = np.cos(thetae)
 
@@ -34,12 +36,12 @@ class HapkeModel(object):
   def copy(self, incident_angle=None, emission_angle=None,
            refraction_index=None, opposition_surge=None):
     model = copy.copy(self)
-    if incident_angle is not None:
+    if incident_angle is not None and emission_angle is not None:
       model._init_angles(incident_angle, emission_angle)
     if refraction_index is not None:
       model._init_refraction(refraction_index)
     if opposition_surge is not None:
-      model.Bg1 = opposition_surge + 1
+      model.needs_bg = opposition_surge
     return model
 
   def scattering_efficiency(self, k, wave, D, s, n):
@@ -92,7 +94,8 @@ class HapkeModel(object):
       else:
         raise ValueError('Invalid phase_fn: %r' % phase_fn)
   
-  def radiance_coeff(self, scat_eff, b, c, ff=None):
+  def radiance_coeff(self, scat_eff, b, c, ff=None, b0=None, h=None):
+      self.Bg1 = self.backscatter(b0,h) + 1 if self.needs_bg else 1
       if self.scatter_mixing == 'isotropic':                
           # calculate the porosity constant for equant particles (K in Hapke 2008)
           tmp = -1.209 * ff**(2./3)
@@ -105,7 +108,7 @@ class HapkeModel(object):
           u0K = self.u0 / PoreK
           Hu, Hu0 = self._Hu_Hu0(scat_eff, uK, u0K)
 
-          Pg = self.single_particle_phase(b, c)
+          Pg = self.single_particle_phase(b, c)         
           tmp = Pg * self.Bg1 + Hu*Hu0 - 1
           numer = PoreK * tmp * scat_eff
           return numer / self.rc_denom
@@ -124,3 +127,10 @@ class HapkeModel(object):
     self.isow = isow
     self.isoHu, self.isoHu0 = self._Hu_Hu0(isow, self.u, self.u0)
     self.rc_denom = self.isow * self.isoHu0 * self.isoHu
+
+  def backscatter(self, b0, h):
+      # Bg = B0/[1+(tan(g/2))/h] 
+      if b0 is not None and h is not None:
+          return b0 / ( 1 + ((np.tan(self.g / 2))/h)) 
+      else:
+          return 1

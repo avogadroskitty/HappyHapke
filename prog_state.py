@@ -14,19 +14,19 @@ import pickle
 
 class ProgramState(object):
   def initialize(self, phase_fn='legendre', scatter_type='lambertian',
-                 thetai=0, thetae=0, n1=0, Bg=0,
+                 thetai=0, thetae=0, n1=0,
                  specwave_file='', calspec_file='', **kwargs):  
     
     plt.close('all')  # hack!
     # HACK: use defaults if some/all files aren't provided
     specwave_file = specwave_file or '../data/specwave2.mat'
     calspec_file = calspec_file or '../data/calspecw2.mat'
-    
+    self.Bg = True if 'Bg' in kwargs else False
+     
     thetai, thetae = np.deg2rad([float(thetai), float(thetae)])
-    self.hapke_scalar = HapkeModel(thetai, thetae, float(n1), float(Bg), phase_fn, scatter_type)
+    self.hapke_scalar = HapkeModel(thetai, thetae, float(n1), self.Bg, phase_fn, scatter_type)
 
     self.spectra = {}
-    self.Bg = Bg
     self.n1 = float(n1)
     for key in kwargs:
         if 'file' in key:
@@ -105,10 +105,12 @@ class ProgramState(object):
   def solve_for_all_k(self, **kwargs):
     
     plt.close('all')  # hack!
+    b0 = None
+    h = None
     for i, key in enumerate(self.pp_spectra):
         for k,v in kwargs.items():
             if key in k.lower():
-                if 'b' in k:
+                if 'b_' in k:
                     b = v
                 elif 'c' in k:
                     c = v
@@ -118,12 +120,24 @@ class ProgramState(object):
                     ff = v
                 elif 'D' in k:
                     D = v
-        b, c, s, D, ff = map(float, (b, c, s, D, ff))
-        self.guesses[key] = b, c, s, D, ff 
+                elif 'b0' in k:
+                    b0 = v
+                elif 'h' in k:
+                    h = v;
+        
+        if self.Bg:
+            b, c, s, D, b0, h, ff = map(float, (b, c, s, D, b0, h, ff))
+            self.guesses[key] = b, c, s, D, b0, h, ff 
+            self.valcnt = 6
+        else:
+            b, c, s, D, ff = map(float, (b, c, s, D, ff))
+            self.guesses[key] = b, c, s, D, ff
+            self.valcnt = 4
+        
         traj = self.pp_spectra[key]
         #The hidden treasure where all the brains are hidden
         solved_k, scat_eff = analysis.MasterHapke1_PP(
-            self.hapke_scalar, traj, b, c, ff, s, D, key, self.n1, debug_plots=True)
+            self.hapke_scalar, traj, b, c, ff, s, D, key, self.n1, debug_plots=True, b0=b0, h=h)
 
         self.ks[key] = solved_k
         self.scat_eff_grain[key] = scat_eff
@@ -131,13 +145,14 @@ class ProgramState(object):
     figures = [plt.figure(i) for i in plt.get_fignums()]
     return 'Solved for k: ', 'guessk', figures
 
-  def optimize_global_k(self, guess_key='file2', opt_strategy='slow',lowk=0, upk=0, num_solns=1, **kwargs):
+  def optimize_global_k(self, guess_key='file2', lowk=0, upk=0, maxfun = 1000, 
+                   spts=30, diff_step = 0.0001, funtol = 0.00000000000001, xtol= 0.00000000000001, **kwargs):
     
     plt.close('all')  # hack!
     #The previous step only approximates for a single grain size
     #Should we have guesses for all grain samples or only the ones we have approximated for?
     no_of_grain_samples = len(self.spectra)
-    total_guesses = no_of_grain_samples * 4 # 4 values (b,c,s,D) for each grain size
+    total_guesses = no_of_grain_samples * self.valcnt # 4 values (b,c,s,D) for each grain size or 6 values (b,c,s,d,b0,h)
 
     self.hapke_vector_isow = self.hapke_scalar.copy()
     if self.hapke_vector_isow.needs_isow:
@@ -147,7 +162,6 @@ class ProgramState(object):
       self.hapke_vector_isow.set_isow(self.calspec[idx1:idx2,1])
 
     # set up initial guesses
-    print(self.ks)
     k = self.ks[guess_key]
     # [215,] -- size of the array
     guesses = np.empty(len(k) + total_guesses)
@@ -156,20 +170,25 @@ class ProgramState(object):
     for i, key in enumerate(sorted(self.guesses.keys())):
       g = self.guesses[key]
       # Unpacks the b,c,s,D values for each grain size into one large array. g holds b,c,s,D,f -- we take only the first four
-      guesses[i:total_guesses:no_of_grain_samples] = g[:4] 
+      guesses[i:total_guesses:no_of_grain_samples] = g[:self.valcnt] 
       # guesses Example:
       # for sml, med anf big grain sizes
       # [sml-b, med-b, big-g, sml-C, med-C, big-C, sml-S, med-S, big-S, sml-D, med-D, big-D, 215 values of K]
       # total with the length of K - 4 values for each grain size -- this is the magic 12
-      ff[i] = g[4]
+      ff[i] = g[self.valcnt]
     guesses[total_guesses:] = k #Filling the rest of the array with the value of K
     # set up bounds
     lb = np.empty_like(guesses)
     ub = np.empty_like(guesses)
 
     for i,grain in enumerate(sorted(self.spectra.keys())):
-        lb[i:total_guesses:no_of_grain_samples] = (kwargs['lowb'+grain], kwargs['lowc'+grain], kwargs['lows'+grain], kwargs['lowD'+grain])
-        ub[i:total_guesses:no_of_grain_samples] = (kwargs['upb'+grain], kwargs['upc'+grain], kwargs['ups'+grain], kwargs['upD'+grain])
+        if self.valcnt == 6:
+            lb[i:total_guesses:no_of_grain_samples] = (kwargs['lowb'+grain], kwargs['lowc'+grain], kwargs['lows'+grain], kwargs['lowD'+grain], kwargs['lowb0'+grain], kwargs['lowh'+grain])
+            ub[i:total_guesses:no_of_grain_samples] = (kwargs['upb'+grain], kwargs['upc'+grain], kwargs['ups'+grain], kwargs['upD'+grain], kwargs['upb0'+grain], kwargs['uph'+grain])
+        else: #we have no Bg
+            lb[i:total_guesses:no_of_grain_samples] = (kwargs['lowb'+grain], kwargs['lowc'+grain], kwargs['lows'+grain], kwargs['lowD'+grain])
+            ub[i:total_guesses:no_of_grain_samples] = (kwargs['upb'+grain], kwargs['upc'+grain], kwargs['ups'+grain], kwargs['upD'+grain])
+        
         
     #Filling in rest of the values
     lb[total_guesses:] = lowk
@@ -179,19 +198,24 @@ class ProgramState(object):
 
     # solve
     tmp = analysis.MasterHapke2_PP(
-        self.hapke_vector_isow, self.pp_spectra, guesses, lb, ub, ff, self.n1,
-        tr_solver='lsmr', verbose=2, spts=int(num_solns))
+        self.hapke_vector_isow, self.pp_spectra, guesses, lb, ub, ff, self.n1, self.valcnt,
+         int(spts), int(maxfun),  float(diff_step), float(funtol), float(xtol), tr_solver='lsmr', verbose=2)
     solns = [res.x for res in tmp]
     best_soln = min(tmp, key=lambda res: res.cost).x
 
     # save the best solution
     self.ks['global'] = best_soln[total_guesses:]
     for i, key in enumerate(sorted(self.spectra.keys())):
-      b, c, s, D = best_soln[i:total_guesses:no_of_grain_samples]
-      self.guesses[key] = (b, c, s, D, ff[i])
+      if self.Bg:
+          b, c, s, D, b0, h = best_soln[i:total_guesses:no_of_grain_samples]
+          self.guesses[key] = (b, c, s, D, b0, h, ff[i])
+      else:
+          b, c, s, D = best_soln[i:total_guesses:no_of_grain_samples]
+          self.guesses[key] = (b, c, s, D, ff[i])
+      
 
     # plot solved parameters (b, c, s, D) for each grain size
-    fig1, axes = plt.subplots(figsize=(9,5), ncols=4, nrows=no_of_grain_samples, sharex=True,
+    fig1, axes = plt.subplots(figsize=(9,5), ncols=self.valcnt, nrows=no_of_grain_samples, sharex=True,
                               frameon=False)
 
     #Take out for now - responisble for error 'builtin function or method object is not iterable
@@ -207,10 +231,13 @@ class ProgramState(object):
     axes[0,1].set_title('c')
     axes[0,2].set_title('s')
     axes[0,3].set_title('D')
+    if self.valcnt == 6:
+        axes[0,4].set_title('b0')
+        axes[0,5].set_title('h')
     for i, key in enumerate(sorted(self.spectra.keys())):
-      for j in range(4):
+      for j in range(self.valcnt):
         ax = axes[i,j]
-        idx = i + j*3
+        idx = i + j*no_of_grain_samples
         ax.axhline(y=lb[idx], c='k', ls='dashed')
         ax.axhline(y=ub[idx], c='k', ls='dashed')
         vals = [guesses[idx]]
@@ -226,10 +253,15 @@ class ProgramState(object):
     #best_soln = solns[-1]
     for i, key in enumerate(sorted(self.spectra.keys())):
       wave, orig = self.pp_spectra[key].T
-      b, c, s, D = best_soln[i:total_guesses:no_of_grain_samples]
+      b0 = None
+      h = None
+      if self.Bg:
+          b, c, s, D, b0, h = best_soln[i:total_guesses:no_of_grain_samples]
+      else:
+          b, c, s, D = best_soln[i:total_guesses:no_of_grain_samples]
       scat = self.hapke_vector_isow.scattering_efficiency(best_soln[total_guesses:], wave,
                                                           D, s, self.n1)
-      rc = self.hapke_vector_isow.radiance_coeff(scat, b, c, ff[i])
+      rc = self.hapke_vector_isow.radiance_coeff(scat, b, c, ff[i], b0, h)
 
       ax1.plot(wave, orig,label=('%s grain' % key))
       ax1.plot(wave, rc, 'k--')
@@ -250,7 +282,7 @@ class ProgramState(object):
     for key in self.spectra.keys():
       ax.plot(wave, self.ks[key], label=key)
 
-    ax.plot(wave, self.ks['global'], 'k--', label='Global')
+    ax.semilogy(wave, self.ks['global'], 'k--', label='Global')
     ax.set_xlabel('Wavelength (um)')
     ax.set_title('Fitted k')
     ax.legend(fontsize='small', loc='best')
@@ -299,13 +331,12 @@ class ProgramState(object):
     
     return 'Solved for n: ', 'sskk', figures
 
-  def phase_solver(self, phaseAngleCount, fit_order, minScale, maxScale, minOffset, maxOffset, maxfun = 1000000000000000000, 
-                   spts=30, funtol = 0.00000000000001, xtol= 0.00000000000001, maxit=1000 , **kwargs ):
+  def phase_solver(self, phaseAngleCount, fit_order, minScale, maxScale, minOffset, maxOffset, maxfun = 1000, 
+                   spts=30, diff_step = 0.0001, funtol = 0.00000000000001, xtol= 0.00000000000001, **kwargs ):
       
       plt.close('all')  # hack!
       k = self.ks['global']
-
-
+      
       #Input: grain size, phase angle
       self.phases = {}
       #Total no of grain sizes == no of pp_spectras
@@ -315,9 +346,14 @@ class ProgramState(object):
       for i in range(no_grain_sizes):
           phaseGrainList[i] = []
           ii = str(i)
-          bcsd = float(kwargs['p_b_'+ii]), float(kwargs['p_c_'+ii]), float(kwargs['p_s_'+ii]), float(kwargs['p_d_'+ii])
-          lb_bcsd = float(kwargs['plb_b_'+ii]), float(kwargs['plb_c_'+ii]), float(kwargs['plb_s_'+ii]), float(kwargs['plb_d_'+ii])              
-          ub_bcsd = float(kwargs['pub_b_'+ii]), float(kwargs['pub_c_'+ii]), float(kwargs['pub_s_'+ii]), float(kwargs['pub_d_'+ii])
+          if self.Bg:
+              bcsd = float(kwargs['p_b_'+ii]), float(kwargs['p_c_'+ii]), float(kwargs['p_s_'+ii]), float(kwargs['p_d_'+ii]), float(kwargs['p_b0_'+ii]), float(kwargs['p_h_'+ii])
+              lb_bcsd = float(kwargs['plb_b_'+ii]), float(kwargs['plb_c_'+ii]), float(kwargs['plb_s_'+ii]), float(kwargs['plb_d_'+ii]), float(kwargs['plb_b0_'+ii]), float(kwargs['plb_h_'+ii])              
+              ub_bcsd = float(kwargs['pub_b_'+ii]), float(kwargs['pub_c_'+ii]), float(kwargs['pub_s_'+ii]), float(kwargs['pub_d_'+ii]), float(kwargs['pub_b0_'+ii]), float(kwargs['pub_h_'+ii])              
+          else:
+              bcsd = float(kwargs['p_b_'+ii]), float(kwargs['p_c_'+ii]), float(kwargs['p_s_'+ii]), float(kwargs['p_d_'+ii])
+              lb_bcsd = float(kwargs['plb_b_'+ii]), float(kwargs['plb_c_'+ii]), float(kwargs['plb_s_'+ii]), float(kwargs['plb_d_'+ii])              
+              ub_bcsd = float(kwargs['pub_b_'+ii]), float(kwargs['pub_c_'+ii]), float(kwargs['pub_s_'+ii]), float(kwargs['pub_d_'+ii])
 
           phase_bcsd[i] = bcsd, lb_bcsd, ub_bcsd
           for j in range(int(phaseAngleCount)):
@@ -337,7 +373,7 @@ class ProgramState(object):
     #multiple grain sizes simultaneously.
       ffs = {}
       for i, key in enumerate(self.guesses.keys()):
-          ffs[i] = self.guesses[key][4]
+          ffs[i] = self.guesses[key][self.valcnt]
 
       lstart2 = self.sskk_lstart
       lend2 = self.sskk_lend
@@ -345,7 +381,7 @@ class ProgramState(object):
       low, high, UV = self.pp_bounds
       vislam, visn = self.vislam, self.visn
       wavelength = self.pp_spectra['file2'][:,0] 
-      params = (lstart2, lend2, low, UV, lamdiff, float(minScale), float(maxScale), float(minOffset), float(maxOffset), int(maxfun), float(funtol), float(xtol), int(maxit), int(spts), 
+      params = (lstart2, lend2, low, UV, lamdiff, float(minScale), float(maxScale), float(minOffset), float(maxOffset), int(maxfun), float(funtol), float(xtol), int(spts), float(diff_step)
                 vislam, visn, wavelength, k, int(fit_order), int(phaseAngleCount), phaseGrainList, phase_bcsd, ffs, self.hapke_vector_isow)
 
       plt_data = analysis.solve_phase(self.phases, params)

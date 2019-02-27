@@ -65,7 +65,7 @@ def preprocess_traj(traj, low, high, UV, fit_order=0, idx = 3):
   return fit_left_side(wave, spec, UV, fit_order=fit_order, idx=idx)
 
 #Solving for K - Logic -- setup the matrices here. For plotting get values from the hapke object - defined in hapke_model.py
-def MasterHapke1_PP(hapke, traj, b, c, ff, s, D, key, n, debug_plots=False):
+def MasterHapke1_PP(hapke, traj, b, c, ff, s, D, key, n, debug_plots=False, b0 = None, h = None):
   wavelength, reflect = traj.T
   table_size = len(traj) * 2
 
@@ -76,7 +76,7 @@ def MasterHapke1_PP(hapke, traj, b, c, ff, s, D, key, n, debug_plots=False):
   # create table of increasing w (single scattering albedo) and use linear
   # interpolation to solve backwards from the real reflectance data
   w = np.linspace(0, 1, table_size, endpoint=False)
-  rc = hapke.radiance_coeff(w, b, c, ff)
+  rc = hapke.radiance_coeff(w, b, c, ff, b0, h)
   w2 = np.interp(reflect, rc, w)
 
   # use the same trick to back-solve for k from w2, except we have to plug in
@@ -89,9 +89,9 @@ def MasterHapke1_PP(hapke, traj, b, c, ff, s, D, key, n, debug_plots=False):
 
   if debug_plots:
     # calculate scattering efficiency for each solved k
-    rc2 = hapke.radiance_coeff(w2, b, c, ff)
+    rc2 = hapke.radiance_coeff(w2, b, c, ff, b0, h)
     ScatAlb = hapke.scattering_efficiency(k, wavelength, D, s, n)
-    rc3 = hapke.radiance_coeff(ScatAlb, b, c, ff)
+    rc3 = hapke.radiance_coeff(ScatAlb, b, c, ff, b0, h)
 
     #The _ is the figure and the axes object is stores in axes
     fig, axes = plt.subplots(figsize=(10,4), nrows=2, ncols=2, sharex=True)
@@ -151,12 +151,12 @@ def MasterHapke1_PP(hapke, traj, b, c, ff, s, D, key, n, debug_plots=False):
   return k, scat_eff_for_k
 
 #Find what is magic 12
-def MasterHapke2_PP(hapke, spectra, coefg, lb, ub, ff, n, spts=1, **kwargs):
+def MasterHapke2_PP(hapke, spectra, coefg, lb, ub, ff, n, valcnt,  spts, maxfun, diff_step, funtol, xtol, **kwargs):
   """This program performs an iterative minimization using Hapke's radiative
   transfer theory to find a global and grain-size independent value of
   imaginary index of refraction, k."""
   no_of_grain_samples = len(spectra)
-  total_guesses = no_of_grain_samples * 4 # 4 values (b,c,s,D) for each grain size
+  total_guesses = no_of_grain_samples * valcnt # 4 values (b,c,s,D) for each grain size
 
   wave = spectra['file2'][:,0]
   actuals = [spectra[key][:,1] for key in sorted(spectra.keys())]
@@ -166,10 +166,15 @@ def MasterHapke2_PP(hapke, spectra, coefg, lb, ub, ff, n, spts=1, **kwargs):
     k = coef[total_guesses:]
     loss = 0
     for i, actual in enumerate(actuals):
-      b, c, s, D = coef[i:total_guesses:no_of_grain_samples]
+      b0 = None
+      h = None
+      if hapke.needs_bg:
+          b, c, s, D, b0, h = coef[i:total_guesses:no_of_grain_samples]
+      else:
+          b, c, s, D = coef[i:total_guesses:no_of_grain_samples]
        #these are paired correctly now that it is sorted elsewheres
       scat = hapke.scattering_efficiency(k, wave, D, s, n)
-      rc = hapke.radiance_coeff(scat, b, c, ff[i])
+      rc = hapke.radiance_coeff(scat, b, c, ff[i], b0, h)
       loss += ((rc - actual)**2).sum()
     return np.sqrt(loss)
 
@@ -187,7 +192,7 @@ def MasterHapke2_PP(hapke, spectra, coefg, lb, ub, ff, n, spts=1, **kwargs):
   solutions = []
   #For each start point - minimize the least square error and append it to solutions.
   for spt in start_points:
-    res = least_squares(obj_fn, spt, bounds=bounds, ftol=1.0e-16, xtol=2.23e-16,x_scale = 'jac', method='trf', max_nfev=300, diff_step=1e-6, **kwargs)
+    res = least_squares(obj_fn, spt, bounds=bounds, ftol=funtol, xtol=xtol,x_scale = 'jac', method='trf', max_nfev=maxfun, diff_step=diff_step, **kwargs)
     #res = least_squares(obj_fn, spt, bounds=bounds, method='trf', **kwargs)
     solutions.append(res)
   return solutions
@@ -768,7 +773,7 @@ def MasterSSKK(kset, anchor, iter, wavelength, n1, lstart, lend):
 
 def solve_phase(phase_files, params):
     
-    (lstart2, lend2, low, UV, lamdiff, minScale, maxScale, minOffset, maxOffset, maxfun, funtol, xtol, maxit, spts, 
+    (lstart2, lend2, low, UV, lamdiff, minScale, maxScale, minOffset, maxOffset, maxfun, funtol, xtol, spts, diff_step
      vislam, visn, wavelength, k, fit_order, phaseAngleCount, phaseGrainList, phase_bcsd, ffs, hapke) = params
 
     phase_file_key_list = range(phaseAngleCount)
@@ -888,6 +893,15 @@ def solve_phase(phase_files, params):
 
     scalar_ff_list = []
 
+    if hapke.needs_bg:
+        scalar_b0_list = []
+        scalar_lb_b0_list = []
+        scalar_ub_b0_list = []
+        
+        scalar_h_list = []
+        scalar_lb_h_list = []
+        scalar_ub_h_list = []
+
     for i in range(grain_samples):
         bi = phase_bcsd[i][0][0] ## each is a tuple of guess, lb, ub and each within is b,c,s,d
         ci = phase_bcsd[i][0][1] 
@@ -904,22 +918,41 @@ def solve_phase(phase_files, params):
         ub_si = phase_bcsd[i][2][2] 
         ub_di = phase_bcsd[i][2][3]
 
+        if hapke.needs_bg:
+            b0i = phase_bcsd[i][0][4]
+            hi = phase_bcsd[i][0][5]
+
+            lb_b0i = phase_bcsd[i][1][4]
+            lb_hi = phase_bcsd[i][1][5]
+
+            ub_b0i = phase_bcsd[i][2][4]
+            ub_hi = phase_bcsd[i][2][5]
+
         scalar_b_list.append(np.repeat(bi, sizep, axis=0))
         scalar_c_list.append(np.repeat(ci, sizep, axis=0))
         scalar_s_list.append(si) #np.repeat(si, phaseAngleCount, axis=0)
         scalar_d_list.append(di) #np.repeat(di, phaseAngleCount, axis=0)
+        
         scalar_ff_list.append(ffs[i]) #np.repeat(ffs[i], phaseAngleCount, axis=0)
 
         scalar_lb_b_list.append(np.repeat(lb_bi, sizep, axis=0))
         scalar_lb_c_list.append(np.repeat(lb_ci, sizep, axis=0))
         scalar_lb_s_list.append(lb_si) #np.repeat(lb_si, phaseAngleCount, axis=0)
         scalar_lb_d_list.append(lb_di) #np.repeat(lb_di, phaseAngleCount, axis=0)
-        
+         
         scalar_ub_b_list.append(np.repeat(ub_bi, sizep, axis=0))
         scalar_ub_c_list.append(np.repeat(ub_ci, sizep, axis=0))
         scalar_ub_s_list.append(ub_si) #np.repeat(ub_si, phaseAngleCount, axis=0)
         scalar_ub_d_list.append(ub_di) #np.repeat(ub_di, phaseAngleCount, axis=0)
 
+        if hapke.needs_bg:
+            scalar_b0_list.append(b0i)
+            scalar_h_list.append(hi)
+            scalar_lb_b0_list.append(lb_b0i) #np.repeat(lb_si, phaseAngleCount, axis=0)
+            scalar_lb_h_list.append(lb_hi) #np.repeat(lb_di, phaseAngleCount, axis=0)
+            scalar_ub_b0_list.append(ub_b0i) #np.repeat(ub_si, phaseAngleCount, axis=0)
+            scalar_ub_h_list.append(ub_hi) #np.repeat(ub_di, phaseAngleCount, axis=0)
+                         
     b = np.hstack(tuple(scalar_b_list))
     c = np.hstack(tuple(scalar_c_list))
     s = np.hstack(tuple(scalar_s_list)) #grain_samples long
@@ -936,10 +969,23 @@ def solve_phase(phase_files, params):
     ub_s = np.hstack(tuple(scalar_ub_s_list)) #grain_samples long
     ub_d = np.hstack(tuple(scalar_ub_d_list)) #grain_samples long
 
-    #stack b,c,s,d
-    bcsd_guess = np.hstack((b,c,s,d)) #b,c == sizep*gs, s,d = grain samples
-    bcsd_lb = np.hstack((lb_b,lb_c,lb_s,lb_d)) #b,c == sizep*gs, s,d = grain samples
-    bcsd_ub = np.hstack((ub_b,ub_c,ub_s,ub_d)) #b,c == sizep*gs, s,d = grain samples
+    if hapke.needs_bg:
+        b0 = np.hstack(tuple(scalar_b0_list)) #grain_samples long
+        h = np.hstack(tuple(scalar_h_list)) #grain_samples long 
+        lb_b0 = np.hstack(tuple(scalar_lb_b0_list)) #grain_samples long
+        lb_h = np.hstack(tuple(scalar_lb_h_list)) #grain_samples long
+        ub_b0 = np.hstack(tuple(scalar_ub_b0_list)) #grain_samples long
+        ub_h = np.hstack(tuple(scalar_ub_h_list)) #grain_samples long
+
+        #stack b,c,s,d
+        bcsd_guess = np.hstack((b,c,s,d, b0, h)) #b,c == sizep*gs, s,d, b0, h = grain samples
+        bcsd_lb = np.hstack((lb_b,lb_c,lb_s,lb_d, lb_b0, lb_h)) #b,c == sizep*gs, s,d, b0, h = grain samples
+        bcsd_ub = np.hstack((ub_b,ub_c,ub_s,ub_d, ub_b0, ub_h)) #b,c == sizep*gs, s,d, b0, h = grain samples
+    else:
+        #stack b,c,s,d
+        bcsd_guess = np.hstack((b,c,s,d)) #b,c == sizep*gs, s,d = grain samples
+        bcsd_lb = np.hstack((lb_b,lb_c,lb_s,lb_d)) #b,c == sizep*gs, s,d = grain samples
+        bcsd_ub = np.hstack((ub_b,ub_c,ub_s,ub_d)) #b,c == sizep*gs, s,d = grain samples
     
     bcsd_guess = np.append([1,0], bcsd_guess) # scale and offset guesses
     bcsd_lb = np.append([minScale,minOffset], bcsd_lb) #bounds are inclusive
@@ -957,6 +1003,7 @@ def solve_phase(phase_files, params):
     thetae = np.asarray(thetae_list) [:, np.newaxis]
 
     #I am using the vector copy - the scalar copy is with progstate safely
+    #For Bg: init angles takes care of resetting g for each thetai and thetae
     hapke._init_angles(thetai, thetae)
     # scat efficiency takes care of init refraction
 
@@ -978,23 +1025,34 @@ def solve_phase(phase_files, params):
     solutions = []
     #For each start point - minimize the least square error and append it to solutions.
 
-    _, axes = plt.subplots(figsize=(10,grain_samples*3), nrows=grain_samples, ncols=4)
+    valcnt = 6 if hapke.needs_bg else 4
+    _, axes = plt.subplots(figsize=(17,grain_samples*3), nrows=grain_samples, ncols=valcnt)
     fig1, ax1 = plt.subplots(figsize=(6,4), frameon=False)
 
     axes[0,0].set_title('Converged b')
     axes[0,1].set_title('Converged c')
     axes[0,2].set_title('s')
     axes[0,3].set_title('D')
+
+    if hapke.needs_bg:
+        axes[0,4].set_title('b0')
+        axes[0,5].set_title('h')
     
     s_st = {g: [] for g in range(grain_samples)} 
     s_ep = {g: [] for g in range(grain_samples)}
     d_st = {g: [] for g in range(grain_samples)}
     d_ep = {g: [] for g in range(grain_samples)}
 
+    if hapke.needs_bg:
+        b0_st = {g: [] for g in range(grain_samples)} 
+        b0_ep = {g: [] for g in range(grain_samples)}
+        h_st = {g: [] for g in range(grain_samples)}
+        h_ep = {g: [] for g in range(grain_samples)}
+
     plt_data = []
 
     for s, spt in enumerate(start_points):
-        res = least_squares(obj_fun, spt, bounds=bounds, ftol = funtol, xtol = xtol, x_scale = 'jac', method = 'trf', max_nfev = maxfun, diff_step=1e-3, tr_solver='lsmr', verbose=2)
+        res = least_squares(obj_fun, spt, bounds=bounds, ftol = funtol, xtol = xtol, x_scale = 'jac', method = 'trf', max_nfev = maxfun, diff_step=diff_step, tr_solver='lsmr', verbose=2)
         solutions.append(res)
 
         #Time to build plots for each start point
@@ -1016,10 +1074,17 @@ def solve_phase(phase_files, params):
         b = con_sol[:sizep*grain_samples]
         c = con_sol[sizep*grain_samples:sizep*grain_samples*2]
         s_ep_all = con_sol[sizep*grain_samples*2:sizep*grain_samples*2+grain_samples]
-        d_ep_all = con_sol[sizep*grain_samples*2+grain_samples:]
+        d_ep_all = con_sol[sizep*grain_samples*2+grain_samples:sizep*grain_samples*2+(2*grain_samples)]
 
         s_st_all = spt[sizep*grain_samples*2+2:sizep*grain_samples*2+grain_samples+2]
-        d_st_all = spt[sizep*grain_samples*2+grain_samples+2:]
+        d_st_all = spt[sizep*grain_samples*2+grain_samples+2:sizep*grain_samples*2+(2*grain_samples)+2]
+
+        if hapke.needs_bg:
+            b0_ep_all = con_sol[sizep*grain_samples*2+(2*grain_samples):sizep*grain_samples*2+(3*grain_samples)]
+            h_ep_all = con_sol[sizep*grain_samples*2+(3*grain_samples):]
+
+            b0_st_all = spt[sizep*grain_samples*2+(2*grain_samples)+2:sizep*grain_samples*2+(3*grain_samples)+2]
+            h_st_all = spt[sizep*grain_samples*2+(3*grain_samples)+2:]
 
         ##Loading to the list previously
         for g in range(grain_samples):
@@ -1028,10 +1093,20 @@ def solve_phase(phase_files, params):
             d_st[g].append(d_st_all[g])
             d_ep[g].append(d_ep_all[g])
 
+            if hapke.needs_bg:
+                b0_st[g].append(b0_st_all[g])
+                b0_ep[g].append(b0_ep_all[g])
+                h_st[g].append(h_st_all[g])
+                h_ep[g].append(h_ep_all[g])
+
             bax = axes[g, 0]
             cax = axes[g, 1]
             sax = axes[g, 2]
             dax = axes[g, 3]
+
+            if hapke.needs_bg:
+                b0ax = axes[g, 4]
+                hax = axes[g, 5]
 
             bax.plot(wave, b[len(wave)*g:len(wave)*(g+1)], label='sp:'+str(s+1))
             cax.plot(wave, c[len(wave)*g:len(wave)*(g+1)], label='sp:'+str(s+1))
@@ -1048,6 +1123,12 @@ def solve_phase(phase_files, params):
                 plt_data.append(['s_sp-'+str(s+1)+'_gs-'+str(g+1), range(spts), s_ep[g]])
                 plt_data.append(['d_sp-'+str(s+1)+'_gs-'+str(g+1), range(spts), d_ep[g]])
 
+                if hapke.needs_bg:                    
+                    b0ax.plot(range(spts), b0_st[g], '*r', range(spts), b0_ep[g],'.g')
+                    hax.plot(range(spts), h_st[g], '*r', range(spts), h_ep[g],'.g')
+                    plt_data.append(['b0_sp-'+str(s+1)+'_gs-'+str(g+1), range(spts), b0_ep[g]])
+                    plt_data.append(['h_sp-'+str(s+1)+'_gs-'+str(g+1), range(spts), h_ep[g]])
+
             bax.legend()
             cax.legend()
             bax.set_ylabel('file'+str(g+1))
@@ -1059,6 +1140,11 @@ def solve_phase(phase_files, params):
             ep = mpatches.Patch(color='green', label='Converged')
             sax.legend(handles=[st, ep])
             dax.legend(handles=[st, ep])
+            if hapke.needs_bg:
+                    b0ax.set_xlabel('Start Points')
+                    hax.set_xlabel('Start Points')
+                    b0ax.legend(handles=[st, ep])
+                    hax.legend(handles=[st, ep])
 
     ## Plotting the best solution
     best_soln = min(solutions, key=lambda res: res.cost).x
@@ -1086,13 +1172,21 @@ def phase_rc(coefp, hapke, sizep, grain_samples, phaseAngleCount, favk, fav_wave
         b = coefp[:sizep*grain_samples]
         c = coefp[sizep*grain_samples:sizep*grain_samples*2]
         s = coefp[sizep*grain_samples*2:sizep*grain_samples*2+grain_samples]
-        d = coefp[sizep*grain_samples*2+grain_samples:]
+        d = coefp[sizep*grain_samples*2+grain_samples:sizep*grain_samples*2+(2*grain_samples)]
 
         #repeating s and d - phase angle times and fitting the shape appropriately
         s = np.repeat(s, phaseAngleCount, axis=0)[:, np.newaxis]
         d = np.repeat(d, phaseAngleCount, axis=0)[:, np.newaxis]
 
-        #Now we are splittinng to their individual grain sizes
+        b0 = None
+        h = None
+        if hapke.needs_bg:
+            b0 = coefp[sizep*grain_samples*2+(2*grain_samples):sizep*grain_samples*2+(3*grain_samples)]
+            h = coefp[sizep*grain_samples*2+(3*grain_samples):]
+            b0 = np.repeat(b0, phaseAngleCount, axis=0)[:, np.newaxis]
+            h = np.repeat(h, phaseAngleCount, axis=0)[:, np.newaxis]
+
+        #Now we are splittinng to their individual grain sizes 
         b_ustk = np.split(b, grain_samples)
         c_ustk = np.split(c, grain_samples)
         blst = []
@@ -1105,7 +1199,7 @@ def phase_rc(coefp, hapke, sizep, grain_samples, phaseAngleCount, favk, fav_wave
 
         favks = favk * scale + offset
         scat = hapke.scattering_efficiency(favks, fav_wave, d, s, favn)
-        rc = hapke.radiance_coeff(scat, allb, allc, ff)
+        rc = hapke.radiance_coeff(scat, allb, allc, ff, b0, h)
 
         return rc, scale, offset
         
