@@ -1,12 +1,13 @@
 summary {
-  font-size: x-large;
-  font-family: sans-serif;
-  font-weight: bold;
-  display: block;
-  cursor: pointer;
-  background-color: #f6a828;
-  text-align: center;
-  border-bottom: 1px solid black;
+    font-size: 2em;
+    padding: 0.3em;
+    font-family: sans-serif;
+    font-weight: bold;
+    display: block;
+    cursor: pointer;
+    background-color: #f7ae27;
+    text-align: center;
+    border-bottom: 1px solid black;
 }
 .heading {
   min-width: 45vw;
@@ -26,14 +27,13 @@ section {
 .param_group {
     text-align: -webkit-center;
     background: #edeeef;
-    padding: 0.3em;
+    padding: 1em;
     margin: 1.5em;
     min-width: 30%;
     border-radius: 3px;
 }
 .param_group p {
   font-style: italic;
-  font-weight: bold;
   font-family: sans-serif;
   margin: 1em 0 0 0;
   text-align:center;
@@ -42,10 +42,6 @@ section {
 }
 .param_group label {
   display: table-row;
-}
-input[type='submit'] {
-  margin: 1em auto 0 auto;
-  width: 33%;
 }
 .phase_inputs {
   display: flex;
@@ -56,7 +52,7 @@ input[type='submit'] {
 }
 .results {
   text-align: center;
-  padding-bottom: 1em;
+  padding: 1em;
 }
 .results table {
   margin: 0.5em 1em;
@@ -148,6 +144,10 @@ details.details_shim_open > summary:before {
     padding: 0.3em;
 }
 
+.ggg {
+    display:flex;
+}
+
 .grain_group div {
     margin: 0.5em;
     padding: 0.3em;
@@ -162,6 +162,39 @@ details.details_shim_open > summary:before {
 }
 
 
-    .inp input {
-        padding: 0.3em;
-    }
+.inp input {
+    padding: 0.3em;
+}
+
+
+input[type='submit'] {
+    border-radius: 4px;
+    padding: 0.8em;
+    color: #000;
+    background-color: #dd9d25;
+    border: 1px solid #dd9d25;
+    font-size: 1.4em;
+    font-weight:bold;
+    width: 40%;
+    cursor: pointer;
+    transition: background-color 0.5s ease;
+    box-shadow: 0 0 4px #AFAFAF;
+    text-align: center;
+    margin: 0 auto;
+    opacity:1;
+}
+
+input[type='submit']:hover {
+    opacity:0.8;
+    transition: opacity 0.5s ease
+}
+
+.ui-widget-header {
+    border: 1px solid #f7ae27;
+    background: #f7ae27 !important;
+}
+
+.param_grain_head, .param_pfile_head, .phead {
+    font-size: 1.3em !important;
+    font-weight: bold;
+}

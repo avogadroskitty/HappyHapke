@@ -384,7 +384,9 @@ class ProgramState(object):
       params = (lstart2, lend2, low, UV, lamdiff, float(minScale), float(maxScale), float(minOffset), float(maxOffset), int(maxfun), float(funtol), float(xtol), int(spts), float(diff_step),
                 vislam, visn, wavelength, k, int(fit_order), int(phaseAngleCount), phaseGrainList, phase_bcsd, ffs, self.hapke_vector_isow)
 
-      plt_data = analysis.solve_phase(self.phases, params)
+      plt_data, allbest = analysis.solve_phase(self.phases, params)
+      
+      self.phase_best_soln, self.phase_bscale, self.phase_boffset, self.phase_favk, self.phase_fav_wave, self.phase_favn, self.phase_ff = allbest
       figures = [plt.figure(i) for i in plt.get_fignums()]
       self.phase = plt_data
 

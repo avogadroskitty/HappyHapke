@@ -1163,7 +1163,9 @@ def solve_phase(phase_files, params):
     lpd = mpatches.Patch(color='blue', label='Data')
     plt.legend(handles=[rc, lpd])
 
-    return plt_data
+    allbest = (best_soln, bscale, boffset, favk, fav_wave, favn, ff)
+
+    return plt_data, allbest
 
 def phase_rc(coefp, hapke, sizep, grain_samples, phaseAngleCount, favk, fav_wave, favn, ff):
         scale = coefp[0]

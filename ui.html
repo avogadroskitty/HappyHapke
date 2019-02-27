@@ -40,6 +40,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
         <form method='POST' enctype='multipart/form-data'>
             <section>
                 <div class='param_group'>
+                    <p class="phead">Input Files</p>
                     <p>
                         Data files containing a single matrix each.
                         Either Matlab (.mat) format or ASCII text format is accepted.
@@ -54,6 +55,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                     <label class="inplbl"><input type='file' name='specwave_file' />Calibration wavelength</label>
                     <label class="inplbl"><input type='file' name='calspec_file' />Calibration spectrum</label>
                 </div>
+                <br />
                 <script>
                     //Adding javascript for Section One
                     $('#lnkAddMore').click(function () {
@@ -63,7 +65,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                     });
                 </script>
                 <div class='param_group'>
-                    <p>Known variables</p>
+                    <p class="phead">Known variables</p>
                     <div class="inp">
                         <label class="inplbl">
                             Incident angle (&theta;<sub>i</sub>), in degrees.
@@ -92,7 +94,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                 </div>
 
                 <div class='param_group'>
-                    <p>Modeling choices</p>
+                    <p class="phead">Modeling choices</p>
                     <div class="inp">
                         <label class="inplbl">
                             Phase function
@@ -112,7 +114,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                             <option selected value='lambertian'>Lambertian</option>
                         </select>
                     </div>
-        </section>
+            </section>
 
             <input name='section' type='hidden' value='initialize' />
             <input type='submit' value='Run' />
@@ -134,6 +136,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
         <form method='POST'>
             <section>
                 <div class='param_group'>
+                    <p class="phead"> Bounds </p>
                     <p>
                         Usable range of wavelengths (in microns).
                         Use the plots above to determine good cutoffs.
@@ -159,7 +162,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                     </div>
                 </div>
                 <div class='param_group'>
-                    <p>Interpolation options</p>
+                    <p class="phead">Interpolation options</p>
 
                     <div class="inp">
                         <label class="inplbl">
@@ -224,72 +227,72 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
         <summary><span class='heading'>Solve for <i>k</i> (global)</span></summary>
         <form method='POST'>
             <label>Load Checkpoint</label><input type='file' class="fileElement" name='lcp' />
-                                          <section>
-                                              <div class='param_group'>
-                                                  <div id="boundnote">
-                                                      <i> Note: The bounds for Henyey Greenstein Function - 0 <= b <= 1, 0 <= c <= 1. <br /> The bounds for Legendre Function - -1.7 <= b <= 1.7, -1 <= c <= 2</i>
-                                                  </div>
+            <section>
+                <div class='param_group'>
+                    <div id="boundnote">
+                        <i> Note: The bounds for Henyey Greenstein Function - 0 <= b <= 1, 0 <= c <= 1. <br /> The bounds for Legendre Function - -1.7 <= b <= 1.7, -1 <= c <= 2</i>
+                    </div>
 
-                                                  <div id="bounds_group"></div>
-                                              </div>
-                                              <div class='param_group'>
-                                                  <p>Optimization Parameters</p>
+                    <div id="bounds_group"></div>
+                </div>
+                <div class='param_group'>
+                    <p class="phead">Optimization Parameters</pclass="phead">
 
-                                                  <div class="inp">
-                                                      <label class="inplbl">
-                                                          Previous section to take the initial guess for k from.
-                                                      </label>
-                                                      <select id="ddlGuessKey" name='guess_key'></select>
-                                                  </div>
+                    <div class="inp">
+                        <label class="inplbl">
+                            Previous section to take the initial guess for k from.
+                        </label>
+                        <select id="ddlGuessKey" name='guess_key'></select>
+                    </div>
 
-                                                  <div class="inp">
-                                                      <label class="inplbl">
-                                                          Lower/upper bounds for each value in k.
-                                                      </label>
-                                                      <input name='lowk' type='number' step='any' value='1e-8' />
-                                                      <input name='upk' type='number' step='any' value='0.1' />
-                                                  </div>
-                                              </div>
-                                              <div class='param_group'>
+                    <div class="inp">
+                        <label class="inplbl">
+                            Lower/upper bounds for each value in k.
+                        </label>
+                        <input name='lowk' type='number' step='any' value='1e-8' />
+                        <input name='upk' type='number' step='any' value='0.1' />
+                    </div>
+                </div>
+                <div class='param_group'>
 
-                                                  <div>
-                                                      <p> MINIMIZATION PARAMETERS</p>
-                                                      <div>
-                                                          <div class="inp">
-                                                              <label class="inplbl">
-                                                                  Max Function Evaluations D1:
-                                                              </label>
-                                                              <input name='maxfun' type='number' value='1000' />
-                                                          </div>
-                                                          <div class="inp">
-                                                              <label class="inplbl">
-                                                                  Function Tolerance (smaller is closer match):
-                                                              </label>
-                                                              <input name='funtol' type='number' value='0.0000000001' />
-                                                          </div>
-                                                          <div class="inp">
-                                                              <label class="inplbl">
-                                                                  X Tolerance:
-                                                              </label>
-                                                              <input name='xtol' type='number' value='0.000000001' step="any" />
-                                                          </div>
-                                                          <div class="inp">
-                                                              <label class="inplbl">
-                                                                  Start Points:
-                                                              </label>
-                                                              <input name='spts' type='number' step='1' value='5' />
-                                                          </div>
-                                                          <div class="inp">
-                                                              <label class="inplbl">
-                                                                  Diff step:
-                                                              </label>
-                                                              <input name='diff_step' type='number' step='any' value='0.000001' />
-                                                          </div>
-                                                      </div>
-                                                  </div>
-                                              </div>
+                    <div>
+                        <p class="phead"> Minimization Parameters </p>
+                        <div>
+                            <div class="inp">
+                                <label class="inplbl">
+                                    Max Function Evaluations D1:
+                                </label>
+                                <input name='maxfun' type='number' value='1000' />
+                            </div>
+                            <div class="inp">
+                                <label class="inplbl">
+                                    Function Tolerance (smaller is closer match):
+                                </label>
+                                <input name='funtol' type='number' value='0.0000000001' />
+                            </div>
+                            <div class="inp">
+                                <label class="inplbl">
+                                    X Tolerance:
+                                </label>
+                                <input name='xtol' type='number' value='0.000000001' step="any" />
+                            </div>
+                            <div class="inp">
+                                <label class="inplbl">
+                                    Start Points:
+                                </label>
+                                <input name='spts' type='number' step='1' value='5' />
+                            </div>
+                            <div class="inp">
+                                <label class="inplbl">
+                                    Diff step:
+                                </label>
+                                <input name='diff_step' type='number' step='any' value='0.000001' />
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                                          </section>
+            </section>
 
             <input name='section' type='hidden' value='optimize_global_k' />
             <input type='submit' value='Run' />
@@ -332,10 +335,10 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                             <option value='4' selected> No MIR data </option>
                         </select>
                     </div>
-                        <br />
-                        <i>If you don't have MIR data, in Adjustment Type - use option <b> No MIR data</b> </i>
+                    <br />
+                    <i>If you don't have MIR data, in Adjustment Type - use option <b> No MIR data</b> </i>
                 </div>
-</section>
+            </section>
 
             <input name='section' type='hidden' value='add_mir_data' />
             <input type='submit' value='Run' />
@@ -358,7 +361,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
             <label>Load Checkpoint</label><input type='file' class="fileElement" name='lcp' />
             <section>
                 <div class='param_group inp'>
-                    <p>Known variables</p>
+                    <p class="phead">Known variables</p>
                     <label class="inplbl">
                         Anchor wavelength, at which the average n (above) was determined.
                     </label>
@@ -387,20 +390,20 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
             <label>Load Checkpoint</label><input type='file' class="fileElement" name='lcp' />
             <section>
                 <div class='param_group'>
-                    <p>Phase Files</p>
+                    <p class="phead">Phase Files</p>
 
                     <div class="inp">
                         <label class="inplbl">
                             Phase Angle Count:
-                        </label> 
+                        </label>
                         <input name='phaseAngleCount' id="phaseAngleCount" type='number' step='1' value='1' min='1' />
                         <span id="AddPhaseCount" /> Add Phase Angles </span>
                     </div>
                     <div id='addFilesPhase'></div>
-                    </div>
+                </div>
                 <div class='param_group'>
                     <div>
-                        <p>Parameters Affecting k</p>
+                        <p class="phead">Parameters Affecting k</p>
                         <div class="inp">
                             <label class="inplbl">
                                 Min Scale:
@@ -433,7 +436,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                         </div>
                     </div>
                     <div>
-                        <p> Minimization Parameters</p>
+                        <p class="phead"> Minimization Parameters</p>
                         <div>
                             <div class="inp">
                                 <label class="inplbl">
@@ -475,7 +478,9 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                         </div>
 
                     </div>
-</section>
+                </div>
+
+            </section>
 
             <input name='section' type='hidden' value='phase_solver' />
             <input type='submit' value='Run' />
@@ -483,16 +488,94 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
         <div class='results'></div>
     </details>
 
+    <details>
+        <summary><span class='heading'>Repeat <i>k</i></span></summary>
+        <form method='POST'>
+            <label>Load Checkpoint</label><input type='file' class="fileElement" name='lcp' />
+            <section>
+                <div class='param_group'>
+                    <div id="boundnote">
+                        <i> Note: The bounds for Henyey Greenstein Function - 0 <= b <= 1, 0 <= c <= 1. <br /> The bounds for Legendre Function - -1.7 <= b <= 1.7, -1 <= c <= 2</i>
+                    </div>
+
+                    <div id="rep_bounds_group"></div>
+                </div>
+                <div class='param_group'>
+                    <p class="phead">Optimization Parameters</p>
+
+                    <div class="inp">
+                        <label class="inplbl">
+                            Previous section to take the initial guess for k from.
+                        </label>
+                        <select id="ddlGuessKey" name='guess_key'></select>
+                    </div>
+
+                    <div class="inp">
+                        <label class="inplbl">
+                            Lower/upper bounds for each value in k.
+                        </label>
+                        <input name='lowk' type='number' step='any' value='1e-8' />
+                        <input name='upk' type='number' step='any' value='0.1' />
+                    </div>
+                </div>
+                <div class='param_group'>
+
+                    <div>
+                        <p class="phead"> Minimization Parameters</p>
+                        <div>
+                            <div class="inp">
+                                <label class="inplbl">
+                                    Max Function Evaluations D1:
+                                </label>
+                                <input name='maxfun' type='number' value='1000' />
+                            </div>
+                            <div class="inp">
+                                <label class="inplbl">
+                                    Function Tolerance (smaller is closer match):
+                                </label>
+                                <input name='funtol' type='number' value='0.0000000001' />
+                            </div>
+                            <div class="inp">
+                                <label class="inplbl">
+                                    X Tolerance:
+                                </label>
+                                <input name='xtol' type='number' value='0.000000001' step="any" />
+                            </div>
+                            <div class="inp">
+                                <label class="inplbl">
+                                    Start Points:
+                                </label>
+                                <input name='spts' type='number' step='1' value='5' />
+                            </div>
+                            <div class="inp">
+                                <label class="inplbl">
+                                    Diff step:
+                                </label>
+                                <input name='diff_step' type='number' step='any' value='0.000001' />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+            <input name='section' type='hidden' value='repeat_k' />
+            <input type='submit' value='Run' />
+        </form>
+        <div class='results'></div>
+    </details>
+
+
     <script>
         var $options;
 
         $('#preprocess_submit').click(function () {
             var phase = $("#ddlphase").val();
             var phasefn = phase == "dhg" ? "Double Heyney-Greenstein" : phase == "legendre" ? "Legendre" : "Constant";
-            $('#ddlGuessKey, #bounds_group, #guess_group, #addFilesPhase').empty();
+            $('#ddlGuessKey, #bounds_group, #guess_group, #addFilesPhase, #rep_bounds_group').empty();
             var bgcheck = $('#chkBg').prop("checked");
             $(".fileElement").each(function (index) {
-                
+
                 grain_lb = 0;
                 grain_ub = 0;
                 var elementName = $(this).attr('name'); // Holds the fileId for the files added adhoc
@@ -513,7 +596,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                         break;
                 }
                 //Checks if the variable fileAdded is not an empty string
-                if (fileAdded) { 
+                if (fileAdded) {
                     $("#ddlGuessKey").append('<option value="' + elementName + '">' + elementName + '</option>');
                     var local_bgmin = '';
                     var global_bgmin = '';
@@ -529,7 +612,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                             '<p>h:</p>' +
                             '<div class="inp"><label class="inplbl">Lower Bounds:</label> <input name="lowh' + elementName + '"" type="number" step="any" value="0.00001" /></div>' +
                             '<div class="inp"><label class="inplbl">Upper Bounds:</label> <input name="uph' + elementName + '"" type="number" step="any" value="0.9" /></div>' +
-                            '</div>';      
+                            '</div>';
 
                         local_bgmin = ' <div class="inp"><label class="inplbl"> B0:</label >  <input name = "b0_' + elementName + '" type = "number" step = "any" value = "0" /></div>' +
                             '<div class="inp"><label class="inplbl"> h: </label > <input name = "h_' + elementName + '" type = "number" step = "any" value = "0.2" /></div>';
@@ -548,18 +631,18 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                             '</div>';
 
                     }
-                    $('#guess_group').append('<div class="guess_grain_group" ><h3 class="param_grain_head" id="guesshead_' + index + '"></h3>' +
-                        '<div class="inp"><label class="inplbl"> Coeff. b:</label >  <input name = "b_' + elementName +'" type = "number" step = "any" value = "0.1" /></div>' +
-                        '<div class="inp"><label class="inplbl"> Coeff. c: </label > <input name = "c_' + elementName +'" type = "number" step = "any" value = "0.3" /></div>' +
-                        '<div class="inp"><label class="inplbl"> Filling Factor: </label > <input name = "ff_' + elementName +'" type = "number" step = "any" value = "0.000000001" /></div>' +
-                        '<div class="inp"><label class="inplbl"> Internal Scattering (s):</label > <input name = "s_' + elementName +'" type = "number" step = "any" value = "0" /></div>' +
+                    $('#guess_group').append('<div class="guess_grain_group" ><h3 class="param_grain_head" >' + elementName + ":" + fileAdded +'</h3>' +
+                        '<div class="inp"><label class="inplbl"> Coeff. b:</label >  <input name = "b_' + elementName + '" type = "number" step = "any" value = "0.1" /></div>' +
+                        '<div class="inp"><label class="inplbl"> Coeff. c: </label > <input name = "c_' + elementName + '" type = "number" step = "any" value = "0.3" /></div>' +
+                        '<div class="inp"><label class="inplbl"> Filling Factor: </label > <input name = "ff_' + elementName + '" type = "number" step = "any" value = "0.000000001" /></div>' +
+                        '<div class="inp"><label class="inplbl"> Internal Scattering (s):</label > <input name = "s_' + elementName + '" type = "number" step = "any" value = "0" /></div>' +
                         '<div class="inp"><label class="inplbl"> Grain Size (D): </label ><input name = "D_' + elementName + '" type = "number" step = "any" value = "63" /></div>' +
-                        local_bgmin+
+                        local_bgmin +
                         '</div>');
 
                     if (phasefn != "Constant") {
-                        $('#boundnote').show();                      
-                        
+                        $('#boundnote').show();
+
                         bcmin = '<p>Coefficient b of ' + phasefn + ' polynomial:</p>' +
                             '<div class="inp"><label class="inplbl">Lower Bounds:</label> <input name="lowb' + elementName + '"" type="number" step="any" value="-1.7" /></div>' +
                             '<div class="inp"><label class="inplbl">Upper Bounds:</label> <input name="upb' + elementName + '"" type="number" step="any" value="1.7" /></div>' +
@@ -568,27 +651,44 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                             '<p>Coefficient c of ' + phasefn + ' polynomial:</p>' +
                             '<div class="inp"><label class="inplbl">Lower Bounds:</label><input name="lowc' + elementName + '"" type="number" step="any" value="-1.0" /></div>' +
                             '<div class="inp"><label class="inplbl">Upper Bounds:</label><input name="upc' + elementName + '"" type="number" step="any" value="1.0" /></div>' +
-                            '</div>' ;
+                            '</div>';
                     }
                     else {
                         $('#boundnote').hide();
                     }
 
-                    $("#bounds_group").append('<div class="grain_group" style="display:flex"><h3 class="param_grain_head" id="head_' + index + '"></h3>' +
+                    var bgstr_p1 = '<div class="grain_group"><h3 class="param_grain_head">' + elementName + ":" + fileAdded + '</h3>' +
+                        '<div class="ggg">' +
                         '<div>' + bcmin +
                         '<div>' +
                         '<p>Internal Scattering:</p>' +
                         '<div class="inp"><label class="inplbl">Lower Bounds:</label> <input name="lows' + elementName + '"" type="number" step="any" value="0" /></div>' +
                         '<div class="inp"><label class="inplbl">Upper Bounds:</label><input name="ups' + elementName + '"" type="number" step="any" value="0.06" /></div>' +
                         '</div>' +
-                        '<div>' +
+                        '<div>' + 
                         '<p>Grain Size:</p>' +
                         '<div class="inp"><label class="inplbl">Lower Bounds:</label><input name="lowD' + elementName + '"" type="number" step="any" value="' + grain_lb + '" /></div>' +
                         '<div class="inp"><label class="inplbl">Upper Bounds:</label><input name="upD' + elementName + '"" type="number" step="any" value="' + grain_ub + '" /></div>' +
-                        '</div>' + global_bgmin +
-                        '</div>');
+                        '</div>' + global_bgmin;
+                    var bgstr_p2 = '</div></div>';
 
-                    $('#addFilesPhase').append('<div class="pfilesecs" id="pfilesec_' + index + '">' + '<h3 class="param_pfile_head" id="pfile_' + index + '"></h3>' +
+                    //Bounds Group is a parent of repeat - rep_bounds_group
+                    $("#bounds_group").append(bgstr_p1 + bgstr_p2);
+
+                    var rep = '<div>' +
+                        '<p>Scale:</p>' +
+                        '<div class="inp"><label class="inplbl">Lower Bounds:</label> <input name="lowscale' + elementName + '"" type="number" step="any" value="0" /></div>' +
+                        '<div class="inp"><label class="inplbl">Upper Bounds:</label><input name="upscale' + elementName + '"" type="number" step="any" value="0.06" /></div>' +
+                        '</div>' +
+                        '<div>' +
+                        '<p>Offset:</p>' +
+                        '<div class="inp"><label class="inplbl">Lower Bounds:</label><input name="lowoffset' + elementName + '"" type="number" step="any" value="0.01" /></div>' +
+                        '<div class="inp"><label class="inplbl">Upper Bounds:</label><input name="upoffset' + elementName + '"" type="number" step="any" value="0.01" /></div>' +
+                        '</div>';
+
+                    $("#rep_bounds_group").append(bgstr_p1 + rep + bgstr_p2);
+                        
+                    $('#addFilesPhase').append('<div class="pfilesecs" id="pfilesec_' + index + '">' + '<h3 class="param_pfile_head" >' + elementName + ":" + fileAdded +'</h3>' +
                         '<span class="p_grain_group" style="display:flex">' +
                         '<div class="pggdiv">' +
                         '<p class="pgg_p">Coeff. b:</p>' +
@@ -597,7 +697,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                         '<label>Guess:</label ><input name = "p_b_' + index + '" type = "number" step = "any" value = "0.1" />' +
                         '</div>' +
                         '<div class="pggdiv">' +
-                        '<p class="pgg_p">Coeff c:</p>' + 
+                        '<p class="pgg_p">Coeff c:</p>' +
                         '<label>Lower Bounds:</label><input name="plb_c_' + index + '"" type="number" step="any" value="-1.0" />' +
                         '<label>Upper Bounds:</label><input name="pub_c_' + index + '"" type="number" step="any" value="1.0" />' +
                         '<label>Guess:</label ><input name = "p_c_' + index + '" type = "number" step = "any" value = "0.3" />' +
@@ -616,37 +716,33 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                         '</div>' +
                         phase_bgmin +
                         '</span>');
-
-                    $('#pfile_' + index).text(elementName + ":" + fileAdded);
-                    $('#guesshead_' + index).text(elementName + ":" + fileAdded);
-                    $('#head_' + index).text(elementName + ":" + fileAdded);
                 }
             });
 
             $('#AddPhaseCount').click(function () {
                 $('.phaseangle').remove();
                 var count = $('#phaseAngleCount').val()
-                for (var i = 0; i < count; i++){
-                $(".fileElement").each(function (index) {
-                    var elementName = $(this).attr('name'); // Holds the fileId for the files added adhoc
-                    var fileAdded = $(this).val().split('\\').pop();
-                    if (fileAdded) {
-                        var selector = 'pfilesec_' + index;
-                        var fileElements = $('#' + selector + ' input.pfileElement');
-                        var id = (fileElements.length);
-                        $('#' + selector).append('<div class="phaseangle">' +
-                            '<label><input type="file" class="pfileElement" name="filepfile_' + index + '_' + id + '"/></label>' +
-                            '<label>Phase Angle (I): <input name="pfile_i_' + index + '_' + id + '" type="number" step="10" value="10" /></label>' +
-                            '<label>Phase Angle (E): <input name="pfile_e_' + index + '_' + id + '" type="number" step="10" value="10" /></label>' +
-                            '</div >');
-                    }
-                });
+                for (var i = 0; i < count; i++) {
+                    $(".fileElement").each(function (index) {
+                        var elementName = $(this).attr('name'); // Holds the fileId for the files added adhoc
+                        var fileAdded = $(this).val().split('\\').pop();
+                        if (fileAdded) {
+                            var selector = 'pfilesec_' + index;
+                            var fileElements = $('#' + selector + ' input.pfileElement');
+                            var id = (fileElements.length);
+                            $('#' + selector).append('<div class="phaseangle">' +
+                                '<label><input type="file" class="pfileElement" name="filepfile_' + index + '_' + id + '"/></label>' +
+                                '<label>Phase Angle (I): <input name="pfile_i_' + index + '_' + id + '" type="number" step="10" value="10" /></label>' +
+                                '<label>Phase Angle (E): <input name="pfile_e_' + index + '_' + id + '" type="number" step="10" value="10" /></label>' +
+                                '</div >');
+                        }
+                    });
                 }
             });
 
         }); //Preprocess submit end
 
-        //Adding javascript for Section Phase Angle 
+            //Adding javascript for Section Phase Angle
     </script>
 
 </body>
