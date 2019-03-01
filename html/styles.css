@@ -198,3 +198,7 @@ input[type='submit']:hover {
     font-size: 1.3em !important;
     font-weight: bold;
 }
+
+#bounds_group, #rep_bounds_group {
+    width:100%;
+}

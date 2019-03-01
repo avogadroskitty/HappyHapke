@@ -268,7 +268,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                                 <label class="inplbl">
                                     Function Tolerance (smaller is closer match):
                                 </label>
-                                <input name='funtol' type='number' value='0.0000000001' />
+                                <input name='funtol' type='number' step="any" value='0.0000000001' />
                             </div>
                             <div class="inp">
                                 <label class="inplbl">
@@ -448,7 +448,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                                 <label class="inplbl">
                                     Function Tolerance (smaller is closer match):
                                 </label>
-                                <input name='funtol' type='number' value='0.00000000000001' />
+                                <input name='funtol' type='number' step="any" value='0.00000000000001' />
                             </div>
                             <div class="inp">
                                 <label class="inplbl">
@@ -501,26 +501,16 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                     <div id="rep_bounds_group"></div>
                 </div>
                 <div class='param_group'>
-                    <p class="phead">Optimization Parameters</p>
-
-                    <div class="inp">
-                        <label class="inplbl">
-                            Previous section to take the initial guess for k from.
-                        </label>
-                        <select id="ddlGuessKey" name='guess_key'></select>
-                    </div>
-
-                    <div class="inp">
-                        <label class="inplbl">
-                            Lower/upper bounds for each value in k.
-                        </label>
-                        <input name='lowk' type='number' step='any' value='1e-8' />
-                        <input name='upk' type='number' step='any' value='0.1' />
-                    </div>
-                </div>
-                <div class='param_group'>
-
                     <div>
+                        <p class="phead">Optimization Parameters</p>
+
+                        <div class="inp">
+                            <label class="inplbl">
+                                Lower/upper bounds for each value in k.
+                            </label>
+                            <input name='lowk' type='number' step='any' value='1e-8' />
+                            <input name='upk' type='number' step='any' value='0.1' />
+                        </div>
                         <p class="phead"> Minimization Parameters</p>
                         <div>
                             <div class="inp">
@@ -533,7 +523,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                                 <label class="inplbl">
                                     Function Tolerance (smaller is closer match):
                                 </label>
-                                <input name='funtol' type='number' value='0.0000000001' />
+                                <input name='funtol' type='number' step="any" value='0.0000000001' />
                             </div>
                             <div class="inp">
                                 <label class="inplbl">
@@ -602,6 +592,7 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                     var global_bgmin = '';
                     var phase_bgmin = '';
                     var bcmin = '';
+                    var rep_bcmin = '';
                     if (bgcheck) {
                         global_bgmin = '<div>' +
                             '<p>B0:</p>' +
@@ -643,15 +634,35 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                     if (phasefn != "Constant") {
                         $('#boundnote').show();
 
-                        bcmin = '<p>Coefficient b of ' + phasefn + ' polynomial:</p>' +
+                        bcmin = '<p>Coeff b of ' + phasefn + ' poly:</p>' +
                             '<div class="inp"><label class="inplbl">Lower Bounds:</label> <input name="lowb' + elementName + '"" type="number" step="any" value="-1.7" /></div>' +
                             '<div class="inp"><label class="inplbl">Upper Bounds:</label> <input name="upb' + elementName + '"" type="number" step="any" value="1.7" /></div>' +
                             '</div>' +
                             '<div>' +
-                            '<p>Coefficient c of ' + phasefn + ' polynomial:</p>' +
+                            '<p>Coeff c of ' + phasefn + ' poly:</p>' +
                             '<div class="inp"><label class="inplbl">Lower Bounds:</label><input name="lowc' + elementName + '"" type="number" step="any" value="-1.0" /></div>' +
                             '<div class="inp"><label class="inplbl">Upper Bounds:</label><input name="upc' + elementName + '"" type="number" step="any" value="1.0" /></div>' +
                             '</div>';
+
+                        rep_bcmin = '<p>Scale b of ' + phasefn + ' poly:</p>' +
+                            '<div class="inp"><label class="inplbl">Lower Bounds:</label> <input name="scalelowb' + elementName + '"" type="number" step="any" value="0" /></div>' +
+                            '<div class="inp"><label class="inplbl">Upper Bounds:</label> <input name="scaleupb' + elementName + '"" type="number" step="any" value="2" /></div>' +
+                            '</div>' +
+                            '<div>' +
+                            '<p>Offset b of ' + phasefn + ' poly:</p>' +
+                            '<div class="inp"><label class="inplbl">Lower Bounds:</label><input name="offlowb' + elementName + '"" type="number" step="any" value="-1" /></div>' +
+                            '<div class="inp"><label class="inplbl">Upper Bounds:</label><input name="offupb' + elementName + '"" type="number" step="any" value="1" /></div>' +
+                            '</div>' +
+                            '<div>' +
+                            '<p>Scale c of ' + phasefn + ' poly:</p>' +
+                            '<div class="inp"><label class="inplbl">Lower Bounds:</label> <input name="scalelowc' + elementName + '"" type="number" step="any" value="0" /></div>' +
+                            '<div class="inp"><label class="inplbl">Upper Bounds:</label> <input name="scaleupc' + elementName + '"" type="number" step="any" value="2" /></div>' +
+                            '</div>' +
+                            '<div>' +
+                            '<p>Offset c of ' + phasefn + ' poly:</p>' +
+                            '<div class="inp"><label class="inplbl">Lower Bounds:</label><input name="offlowc' + elementName + '"" type="number" step="any" value="-1" /></div>' +
+                            '<div class="inp"><label class="inplbl">Upper Bounds:</label><input name="offupc' + elementName + '"" type="number" step="any" value="1" /></div>' +
+                            '</div>'
                     }
                     else {
                         $('#boundnote').hide();
@@ -659,34 +670,25 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
 
                     var bgstr_p1 = '<div class="grain_group"><h3 class="param_grain_head">' + elementName + ":" + fileAdded + '</h3>' +
                         '<div class="ggg">' +
-                        '<div>' + bcmin +
-                        '<div>' +
+                        '<div>';
+                    var bgstr_p2 ='<div>' +
                         '<p>Internal Scattering:</p>' +
                         '<div class="inp"><label class="inplbl">Lower Bounds:</label> <input name="lows' + elementName + '"" type="number" step="any" value="0" /></div>' +
                         '<div class="inp"><label class="inplbl">Upper Bounds:</label><input name="ups' + elementName + '"" type="number" step="any" value="0.06" /></div>' +
                         '</div>' +
-                        '<div>' + 
+                        '<div>' +
                         '<p>Grain Size:</p>' +
                         '<div class="inp"><label class="inplbl">Lower Bounds:</label><input name="lowD' + elementName + '"" type="number" step="any" value="' + grain_lb + '" /></div>' +
                         '<div class="inp"><label class="inplbl">Upper Bounds:</label><input name="upD' + elementName + '"" type="number" step="any" value="' + grain_ub + '" /></div>' +
-                        '</div>' + global_bgmin;
-                    var bgstr_p2 = '</div></div>';
+                        '</div>' + global_bgmin + '</div></div>';
+                     ;
 
                     //Bounds Group is a parent of repeat - rep_bounds_group
-                    $("#bounds_group").append(bgstr_p1 + bgstr_p2);
+                    
+                    $("#bounds_group").append(bgstr_p1 + bcmin + bgstr_p2);
 
-                    var rep = '<div>' +
-                        '<p>Scale:</p>' +
-                        '<div class="inp"><label class="inplbl">Lower Bounds:</label> <input name="lowscale' + elementName + '"" type="number" step="any" value="0" /></div>' +
-                        '<div class="inp"><label class="inplbl">Upper Bounds:</label><input name="upscale' + elementName + '"" type="number" step="any" value="0.06" /></div>' +
-                        '</div>' +
-                        '<div>' +
-                        '<p>Offset:</p>' +
-                        '<div class="inp"><label class="inplbl">Lower Bounds:</label><input name="lowoffset' + elementName + '"" type="number" step="any" value="0.01" /></div>' +
-                        '<div class="inp"><label class="inplbl">Upper Bounds:</label><input name="upoffset' + elementName + '"" type="number" step="any" value="0.01" /></div>' +
-                        '</div>';
 
-                    $("#rep_bounds_group").append(bgstr_p1 + rep + bgstr_p2);
+                    $("#rep_bounds_group").append(bgstr_p1 + rep_bcmin + bgstr_p2);
                         
                     $('#addFilesPhase').append('<div class="pfilesecs" id="pfilesec_' + index + '">' + '<h3 class="param_pfile_head" >' + elementName + ":" + fileAdded +'</h3>' +
                         '<span class="p_grain_group" style="display:flex">' +

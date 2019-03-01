@@ -195,7 +195,7 @@ class ProgramState(object):
     ub[total_guesses:] = upk
 
     self.bounds = (lb, ub)
-
+    self.global_ff = ff
     # solve
     tmp = analysis.MasterHapke2_PP(
         self.hapke_vector_isow, self.pp_spectra, guesses, lb, ub, ff, self.n1, self.valcnt,
@@ -371,9 +371,7 @@ class ProgramState(object):
     #coefficients for the phase function by minimizing the difference between
     #the calculated and observed data for multiple viewing geometries and
     #multiple grain sizes simultaneously.
-      ffs = {}
-      for i, key in enumerate(self.guesses.keys()):
-          ffs[i] = self.guesses[key][self.valcnt]
+      ffs = self.global_ff
 
       lstart2 = self.sskk_lstart
       lend2 = self.sskk_lend
@@ -386,13 +384,78 @@ class ProgramState(object):
 
       plt_data, allbest = analysis.solve_phase(self.phases, params)
       
-      self.phase_best_soln, self.phase_bscale, self.phase_boffset, self.phase_favk, self.phase_fav_wave, self.phase_favn, self.phase_ff = allbest
+      self.phase_best_soln, self.phase_bscale, self.phase_boffset, self.phase_k, self.phase_wave, self.phase_n = allbest
       figures = [plt.figure(i) for i in plt.get_fignums()]
       self.phase = plt_data
 
       return 'Phase Solved ', 'psolve', figures
+  
+  def repeat_k(self, lowk=0, upk=0, maxfun = 1000, spts=30, diff_step = 0.0001, funtol = 0.00000000000001, xtol= 0.00000000000001, **kwargs):
+      plt.close('all')  # hack!    
 
-  #Download Handler - When param passed is according to the section
+      sizep = len(self.phase_k)
+      grain_samples = len(self.pp_spectra.keys())
+      gsvals = self.valcnt + 2
+      total_guesses = grain_samples * (gsvals) 
+      # gs3 == sb1,ob1,sc1,oc1,s1,D1,b0_1,h1 | sb2,ob2,sc2,oc2,s2,D2,b0_2,h2 | sb3,ob3,sc3,oc3,s3,D3,b0_3,h3
+      rep_bounds = {}
+      for i,grain in enumerate(sorted(self.spectra.keys())):
+          if self.Bg:
+              lb_bcsd = float(kwargs['scalelowb'+grain]), float(kwargs['offlowb'+grain]), float(kwargs['scalelowc'+grain]), float(kwargs['offlowc'+grain]), float(kwargs['lows'+grain]), float(kwargs['lowD'+grain]), float(kwargs['lowb0'+grain]), float(kwargs['lowh'+grain])
+              ub_bcsd = float(kwargs['scaleupb'+grain]), float(kwargs['offupb'+grain]), float(kwargs['scaleupc'+grain]), float(kwargs['offupc'+grain]),  float(kwargs['ups'+grain]), float(kwargs['upD'+grain]), float(kwargs['upb0'+grain]), float(kwargs['uph'+grain]) 
+          else:
+              lb_bcsd = float(kwargs['scalelowb'+grain]), float(kwargs['offlowb'+grain]), float(kwargs['scalelowc'+grain]), float(kwargs['offlowc'+grain]), float(kwargs['lows'+grain]), float(kwargs['lowD'+grain])
+              ub_bcsd = float(kwargs['scaleupb'+grain]), float(kwargs['offupb'+grain]), float(kwargs['scaleupc'+grain]), float(kwargs['offupc'+grain]),  float(kwargs['ups'+grain]), float(kwargs['upD'+grain])
+
+          rep_bounds[i] = lb_bcsd, ub_bcsd
+
+      if self.hapke_vector_isow.needs_isow:
+          # use vector isow, instead of the scalar we had before
+          _, high, UV = self.pp_bounds 
+          idx1, idx2 = np.searchsorted(self.calspec[:,0], (UV, high))
+          self.hapke_vector_isow.set_isow(self.calspec[idx1:idx2,1])
+
+      guesses = np.empty(sizep + total_guesses)  
+      prev_b = self.phase_best_soln[:sizep*grain_samples]
+      prev_c = self.phase_best_soln[sizep*grain_samples:sizep*grain_samples*2]
+      prev_s = self.phase_best_soln[sizep*grain_samples*2:sizep*grain_samples*2+grain_samples]
+      prev_D = self.phase_best_soln[sizep*grain_samples*2:sizep*grain_samples*2+grain_samples]
+
+      if self.Bg:
+          prev_b0 = self.phase_best_soln[sizep*grain_samples*2+(2*grain_samples):sizep*grain_samples*2+(3*grain_samples)]
+          prev_h = self.phase_best_soln[sizep*grain_samples*2+(3*grain_samples):]
+      
+      # scale default guess: 1, offset default guess: 0
+      # i = 0,1,2
+      for i,grain in enumerate(sorted(self.spectra.keys())):
+          # 0 -8, 8 - 16, 16-24
+          if self.Bg:
+              guesses[i*gsvals: (i*gsvals)+gsvals] = np.array([1,0,1,0,prev_s[i], prev_D[i], prev_b0[i], prev_h[i]]) 
+          else:
+              guesses[i*gsvals: (i*gsvals)+gsvals] = np.array([1,0,1,0,prev_s[i], prev_D[i]])
+      
+      guess_k = self.phase_bscale * self.phase_k + self.phase_boffset
+      guesses[total_guesses:] = guess_k
+
+      # set up bounds    
+      lb = np.empty_like(guesses)
+      ub = np.empty_like(guesses)
+      
+      for i,grain in enumerate(sorted(self.spectra.keys())):
+          lb[i*gsvals: (i*gsvals)+gsvals] = rep_bounds[i][0]
+          ub[i*gsvals: (i*gsvals)+gsvals] = rep_bounds[i][1]
+             
+      lb[total_guesses:] = lowk 
+      ub[total_guesses:] = upk
+
+      params = (self.hapke_vector_isow, self.pp_spectra, guesses, prev_b, prev_c, lb, ub, self.ffs, self.phase_n, self.phase_k, self.phase_wave, grain_samples, gsvals, total_guesses, spts, maxfun, diff_step, funtol, xtol)
+      plt_data = analysis.Hapke_mastermind(params)
+       
+      self.repk = plt_data
+
+      return 'Phase Solved ', 'repk', figures
+    
+  #Download Handler - When param passed is according to the section 
   def _download_data(self, param):
     names = {
         'global': 'Global', 
@@ -431,7 +494,7 @@ class ProgramState(object):
             for plt in self.sskk:
                 file = '%s.txt' % plt[0]
                 zf.writestr(file, _plot2bytes(plt[1], plt[2]))
-        return 'SSKK Data.zip', 'application/zip', buf.getvalue()
+        return 'SSKK Data.zip', 'application/zip', buf.getvalue()     
         #return 'n.txt', 'text/plain', _vec2bytes(self.hapke_vector_n.n)
     elif param == 'psolve':
         buf = BytesIO()
@@ -440,10 +503,17 @@ class ProgramState(object):
                 file = '%s.txt' % plt[0]
                 zf.writestr(file, _plot2bytes(plt[1], plt[2]))
         return 'PhaseSolve.zip', 'application/zip', buf.getvalue()
+    elif param == 'repk':
+        buf = BytesIO()
+        with ZipFile(buf, mode='w') as zf:
+            for plt in self.repk:
+                file = '%s.txt' % plt[0]
+                zf.writestr(file, _plot2bytes(plt[1], plt[2]))
+        return 'PhaseSolve.zip', 'application/zip', buf.getvalue()
     else:
       raise ValueError('Unknown download type: %r' % param)
-
-
+     
+         
 def _traj2bytes(traj):
   return b'\n'.join(b'%r\t%r' % tuple(row) for row in traj)
 
@@ -453,3 +523,4 @@ def _vec2bytes(arr):
 
 def _plot2bytes(x_data, y_data):
   return b'\n'.join(b'%r\t%r' % (x,y) for x,y in zip(x_data, y_data))
+   
