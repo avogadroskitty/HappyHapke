@@ -23,8 +23,8 @@ class ProgramState(object):
     calspec_file = calspec_file or '../data/calspecw2.mat'
     self.Bg = True if 'Bg' in kwargs else False
      
-    thetai, thetae = np.deg2rad([float(thetai), float(thetae)])
-    self.hapke_scalar = HapkeModel(thetai, thetae, float(n1), self.Bg, phase_fn, scatter_type)
+    self.global_thetai, self.global_thetae = np.deg2rad([float(thetai), float(thetae)])
+    self.hapke_scalar = HapkeModel(self.global_thetai, self.global_thetae, float(n1), self.Bg, phase_fn, scatter_type)
 
     self.spectra = {}
     self.n1 = float(n1)
@@ -416,14 +416,15 @@ class ProgramState(object):
           self.hapke_vector_isow.set_isow(self.calspec[idx1:idx2,1])
 
       guesses = np.empty(sizep + total_guesses)  
-      prev_b = self.phase_best_soln[:sizep*grain_samples]
-      prev_c = self.phase_best_soln[sizep*grain_samples:sizep*grain_samples*2]
-      prev_s = self.phase_best_soln[sizep*grain_samples*2:sizep*grain_samples*2+grain_samples]
-      prev_D = self.phase_best_soln[sizep*grain_samples*2:sizep*grain_samples*2+grain_samples]
+      bestsol = self.phase_best_soln[2:]
+      prev_b = bestsol[:sizep*grain_samples]
+      prev_c = bestsol[sizep*grain_samples:sizep*grain_samples*2]
+      prev_s = bestsol[sizep*grain_samples*2:sizep*grain_samples*2+grain_samples]
+      prev_D = bestsol[sizep*grain_samples*2+grain_samples:sizep*grain_samples*2+(2*grain_samples)]
 
       if self.Bg:
-          prev_b0 = self.phase_best_soln[sizep*grain_samples*2+(2*grain_samples):sizep*grain_samples*2+(3*grain_samples)]
-          prev_h = self.phase_best_soln[sizep*grain_samples*2+(3*grain_samples):]
+          prev_b0 = bestsol[sizep*grain_samples*2+(2*grain_samples):sizep*grain_samples*2+(3*grain_samples)]
+          prev_h = bestsol[sizep*grain_samples*2+(3*grain_samples):]
       
       # scale default guess: 1, offset default guess: 0
       # i = 0,1,2
@@ -448,9 +449,9 @@ class ProgramState(object):
       lb[total_guesses:] = lowk 
       ub[total_guesses:] = upk
 
-      params = (self.hapke_vector_isow, self.pp_spectra, guesses, prev_b, prev_c, lb, ub, self.ffs, self.phase_n, self.phase_k, self.phase_wave, grain_samples, gsvals, total_guesses, spts, maxfun, diff_step, funtol, xtol)
+      params = (self.hapke_vector_isow, self.pp_spectra, self.global_thetai, self.global_thetae, guesses, prev_b, prev_c, lb, ub, self.global_ff, self.phase_n, self.phase_k, self.phase_wave, grain_samples, gsvals, total_guesses, int(spts), float(maxfun), float(diff_step), float(funtol), float(xtol))
       plt_data = analysis.Hapke_mastermind(params)
-       
+      figures = [plt.figure(i) for i in plt.get_fignums()]
       self.repk = plt_data
 
       return 'Phase Solved ', 'repk', figures
@@ -509,7 +510,7 @@ class ProgramState(object):
             for plt in self.repk:
                 file = '%s.txt' % plt[0]
                 zf.writestr(file, _plot2bytes(plt[1], plt[2]))
-        return 'PhaseSolve.zip', 'application/zip', buf.getvalue()
+        return 'RepeatK.zip', 'application/zip', buf.getvalue()
     else:
       raise ValueError('Unknown download type: %r' % param)
      

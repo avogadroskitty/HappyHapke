@@ -1207,28 +1207,35 @@ def phase_rc(coefp, hapke, sizep, grain_samples, phaseAngleCount, favk, fav_wave
 
 
 def Hapke_mastermind(params):
-  hapke, spectra, guesses, prev_b, prev_c, lb, ub, ff, n, k, wave, grain_samples, gsvals, total_guesses, spts, maxfun, diff_step, funtol, xtol = params
-  actuals = [spectra[key][:,1] for key in sorted(spectra.keys())]
+  hapke, spectra, thetai, thetae, guesses, prev_b, prev_c, lb, ub, ff, n, k, wave, grain_samples, gsvals, total_guesses, spts, maxfun, diff_step, funtol, xtol = params
+  actuals = np.array([spectra[key][:,1] for key in sorted(spectra.keys())])
 
   #Why 3 
   def obj_fn(coef):
-    k = coef[total_guesses:]
     loss = 0
-    for i, actual in enumerate(actuals):
-      b0 = None
-      h = None
-      if hapke.needs_bg:
-          bscale, boff, cscale, coff, s, D, b0, h = coef[i*gsvals: (i*gsvals)+gsvals]
-      else:
-          bscale, boff, cscale, coff, s, D = coef[i*gsvals: (i*gsvals)+gsvals]
-      
-      scat = hapke.scattering_efficiency(k, wave, D, s, n)
-      rc = hapke.radiance_coeff(scat, prev_b, prev_c, ff[i], b0, h)
-      loss += ((rc - actual)**2).sum()
+    rc = rep_rc(hapke, coef, prev_b, prev_c, grain_samples, gsvals, thetai, thetae, ff, wave, k, n)
+    loss += ((rc - actuals)**2).sum()
     return np.sqrt(loss)
 
   start_points = np.empty((spts, len(guesses)))
   start_points[0] = guesses
+
+  # plot solved parameters (b, c, s, D) for each grain size
+  fig1, axes = plt.subplots(figsize=(14,grain_samples*2), ncols=(gsvals-4), nrows=grain_samples, sharex=True, frameon=False)
+  #Label the columns
+  for i in range(grain_samples):
+      axes[i,0].set_ylabel('file'+str(i))
+
+  axes[0,0].set_title('s')
+  axes[0,1].set_title('D')  
+  allsp_s = {g: [] for g in range(grain_samples)} 
+  allsp_d = {g: [] for g in range(grain_samples)} 
+  if hapke.needs_bg:
+      axes[0,2].set_title('b0')
+      axes[0,3].set_title('h')
+      allsp_b0 = {g: [] for g in range(grain_samples)} 
+      allsp_h = {g: [] for g in range(grain_samples)} 
+
 
   #Initialize random start points
   for i in range(1, spts):
@@ -1239,73 +1246,120 @@ def Hapke_mastermind(params):
   solutions = []
   plt_data = []
   #For each start point - minimize the least square error and append it to solutions.
-  fig3, ax3 = plt.subplots(figsize=(6, 4), frameon=False)
-  ax3.set_xlabel('Wavelength (um)')
+  fig3, ax3 = plt.subplots(figsize=(6, 4), frameon=False)  
+  ax3.set_xlabel('Wavelength (um)') 
   ax3.set_title('Fitted k')
-  ax3.legend(fontsize='small', loc='best')
-
-  for s,spt in enumerate(start_points):
-    res = least_squares(obj_fn, spt, bounds=bounds, ftol=funtol, xtol=xtol,x_scale = 'jac', method='trf', max_nfev=maxfun, diff_step=diff_step)
+  
+  for si,spt in enumerate(start_points):
+    res = least_squares(obj_fn, spt, bounds=bounds, ftol=funtol, xtol=xtol,x_scale = 'jac', method='trf', max_nfev=maxfun, diff_step=diff_step, verbose=2)
     solutions.append(res)
     ki = res.x[total_guesses:]
-    ax3.semilogy(wave, ki, 'b--', label='spt:'+str(s))
-    plt_data.append(['spt:'+str(s), wave, ki])
+    ax3.semilogy(wave, ki, 'b--', label='spt:'+str(si+1))
+    plt_data.append(['spt:'+str(si+1), wave, ki])
+    con_sol = res.x[2:]
+    b0 = None
+    h = None
+    bscale = np.zeros(grain_samples)
+    boff = np.zeros(grain_samples)
+    cscale = np.zeros(grain_samples)
+    coff = np.zeros(grain_samples)
+    s = np.zeros(grain_samples)
+    D = np.zeros(grain_samples)
+    if hapke.needs_bg:
+        b0 = np.zeros(grain_samples)
+        h = np.zeros(grain_samples)
+    for i in range(grain_samples):
+        
+        if hapke.needs_bg:
+            bscale[i], boff[i], cscale[i], coff[i], s[i], D[i], b0[i], h[i] = con_sol[i*gsvals: (i*gsvals)+gsvals]
+            allsp_s[i].append(s[i])
+            allsp_d[i].append(D[i])
+            allsp_b0[i].append(b0[i])
+            allsp_h[i].append(h[i])
+            sax = axes[i,0]
+            dax = axes[i,1]
+            b0ax = axes[i,2]
+            hax = axes[i,3]
+        else:
+            bscale[i], boff[i], cscale[i], coff[i], s[i], D[i]= con_sol[i*gsvals: (i*gsvals)+gsvals]
+            allsp_s[i].append(s[i])
+            allsp_d[i].append(D[i])
+            sax = axes[i,0]
+            dax = axes[i,1]
 
+        if si == (spts-1):
+            sax.plot(range(spts),allsp_s[i],'-x')
+            dax.plot(range(spts),allsp_d[i],'-x')
+            plt_data.append(['s_'+str(i), range(spts), allsp_s[i]])
+            plt_data.append(['D_'+str(i), range(spts), allsp_d[i]])
+            if hapke.needs_bg:
+                b0ax.plot(range(spts), allsp_b0[i], '-x', label="b0")
+                hax.plot(range(spts), allsp_h[i], '-x', label="h")
+                plt_data.append(['b0_'+str(i), range(spts), allsp_b0[i]])
+                plt_data.append(['h_'+str(i), range(spts), allsp_h[i]])
+    sax.set_xlabel('Start Points')
+    dax.set_xlabel('Start Points')
+    if hapke.needs_bg:
+            b0ax.set_xlabel('Start Points')
+            hax.set_xlabel('Start Points')
+            
   best_soln = min(solutions, key=lambda res: res.cost).x
-  # plot solved parameters (b, c, s, D) for each grain size
-  fig1, axes = plt.subplots(figsize=(9,5), ncols=gsvals-2, nrows=grain_samples, sharex=True, frameon=False)
-  #Label the columns
-  for i in range(grain_samples):
-      axes[i,0].set_ylabel('file'+str(i))
 
-  axes[0,1].set_title('s')
-  axes[0,2].set_title('D')
-  if hapke.needs_bg:
-      axes[0,3].set_title('b0')
-      axes[0,4].set_title('h')
-
-  for i, key in enumerate(sorted(spectra.keys())):
-      for j in range(gsvals-2):
-          ax = axes[i,j]
-          idx = i + j*no_of_grain_samples
-          ax.axhline(y=lb[idx], c='k', ls='dashed')
-          ax.axhline(y=ub[idx], c='k', ls='dashed')
-          vals = [guesses[idx]]
-          vals.extend([sn[idx] for sn in solutions])
-          ax.plot(vals, marker='x')
-  for ax in axes[2]:
-      ax.set_xlabel('Step #')
-      ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    
   # plot resulting rc vs original data for the best soln
   fig2, (ax1, ax2) = plt.subplots(figsize=(9,4), ncols=2, sharex=True,
                                     frameon=False)
-  #best_soln = solns[-1]
-  for i, key in enumerate(sorted(spectra.keys())):
-      wave, orig = pp_spectra[key].T
-      b0 = None
-      h = None
-      if hapke.needs_bg:
-          bscale, boff, cscale, coff, s, D, b0, h = coef[i*gsvals: (i*gsvals)+gsvals]
-      else:
-          bscale, boff, cscale, coff, s, D = coef[i*gsvals: (i*gsvals)+gsvals]
-      scat = hapke.scattering_efficiency(best_soln[total_guesses:], wave, D, s, n)
-      rc = hapkeradiance_coeff(scat, prev_b, prev_c, ff[i], b0, h)
-
-  ax1.plot(wave, orig,label=('%s grain' % key))
-  ax1.plot(wave, rc, 'k--')
-  ax1.set_xlabel('Wavelength (um)')
-  ax1.set_ylabel('Reflectance (#)')
-  ax1.set_title('Final fit')
-  ax1.legend(fontsize='small', loc='best')
-  ax2.plot(wave, np.abs(rc - orig), lw=1, label=('%s fit' % key))
-  ax2.set_title('Fit error')
-  ax2.set_xlabel('Wavelength (um)')
-  ax2.set_ylabel('Abs. Error')
-  ax2.legend(fontsize='small', loc='best')
+  
+  rc = rep_rc(hapke, best_soln, prev_b, prev_c, grain_samples, gsvals, thetai, thetae, ff, wave, k, n)
 
   ki = best_soln[total_guesses:]
   ax3.semilogy(wave, ki, 'k--', label='best')
+  ax3.legend(fontsize='small', loc='best')
   plt_data.append(['bestk', wave, ki])
 
   return plt_data
+
+def rep_rc(hapke, coef, prev_b, prev_c, grain_samples, gsvals, thetai, thetae, ff, wave, k, n):
+    b0 = None
+    h = None
+    bscale = np.zeros(grain_samples)
+    boff = np.zeros(grain_samples)
+    cscale = np.zeros(grain_samples)
+    coff = np.zeros(grain_samples)
+    s = np.zeros(grain_samples)
+    D = np.zeros(grain_samples)
+    if hapke.needs_bg:
+        b0 = np.zeros(grain_samples)
+        h = np.zeros(grain_samples)
+    for i in range(grain_samples):
+        if hapke.needs_bg:
+            bscale[i], boff[i], cscale[i], coff[i], s[i], D[i], b0[i], h[i] = coef[i*gsvals: (i*gsvals)+gsvals]
+        else:
+            bscale[i], boff[i], cscale[i], coff[i], s[i], D[i]= coef[i*gsvals: (i*gsvals)+gsvals]
+
+    bscale = bscale[:,np.newaxis]
+    boff = boff[:,np.newaxis]
+    cscale = cscale[:,np.newaxis]
+    coff = coff[:,np.newaxis]
+    s = s[:,np.newaxis]
+    D = D[:,np.newaxis]
+    if hapke.needs_bg:
+        b0 = b0[:,np.newaxis]
+        h = h[:,np.newaxis]
+         
+    #Now we are splittinng to their individual grain sizes 
+    b_ustk = np.split(prev_b, grain_samples)
+    c_ustk = np.split(prev_c, grain_samples)
+    allb = np.vstack(b_ustk)
+    allc = np.vstack(c_ustk)
+
+    allb = allb * bscale + boff
+    allc = allc * cscale + coff
+
+    stk_k = np.repeat(k[np.newaxis,:],grain_samples,axis=0)
+    stk_n = np.repeat(n[np.newaxis,:],grain_samples,axis=0)
+    hapke._init_angles(thetai, thetae)
+    
+    scat = hapke.scattering_efficiency(stk_k, wave, D, s, stk_n)
+    rc = hapke.radiance_coeff(scat, allb, allc, ff[i], b0, h)
+
+    return rc
