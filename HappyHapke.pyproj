@@ -27,6 +27,9 @@
   <ItemGroup>
     <Compile Include="analysis.py" />
     <Compile Include="cli.py" />
+    <Compile Include="constants.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="hapke_model.py" />
     <Compile Include="mplweb.py" />
     <Compile Include="phaseangle.py">

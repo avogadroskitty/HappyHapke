@@ -11,6 +11,8 @@ from scipy.interpolate import PchipInterpolator
 from scipy import interpolate
 from scipy import arange, array, exp
 import math
+import random
+import constants
 
 def loadmat_single(path_or_file_obj):
   """Loads one array from a MAT-file or ascii file."""
@@ -180,10 +182,14 @@ def MasterHapke2_PP(hapke, spectra, coefg, lb, ub, ff, n, valcnt,  spts, maxfun,
 
   start_points = np.empty((spts, len(coefg)))
   start_points[0] = coefg
-
+  k = coefg[total_guesses:]
   #Initialize random start points
   for i in range(1, spts):
+    offset = random.uniform(constants.K_OFFSET_LOWBOUND, constants.K_OFFSET_UPBOUND)
+    scale = random.uniform(constants.K_SCALE_LOWBOUND,constants.K_SCALE_UPBOUND)
+    randk = (scale * k) + offset
     start_points[i] = np.random.uniform(lb, ub)
+    start_points[i, total_guesses:] = randk
 
   #Start Points is 215 + 4 * no of grain samples
 
@@ -1009,7 +1015,7 @@ def solve_phase(phase_files, params):
 
     def obj_fun(coefp):
         loss = 0
-        rc, scale, offset = phase_rc(coefp, hapke, sizep, grain_samples, phaseAngleCount, favk, fav_wave, favn, ff)
+        rc, scat, scale, offset = phase_rc(coefp, hapke, sizep, grain_samples, phaseAngleCount, favk, fav_wave, favn, ff)
         loss += ((rc - longphasedata)**2).sum()
         return np.sqrt(loss)
     
@@ -1017,16 +1023,28 @@ def solve_phase(phase_files, params):
     start_points = np.empty((spts, len(bcsd_guess)))
     start_points[0] = bcsd_guess
 
+    
     #Initialize random start points
     for i in range(1, spts):
+        scalar_b_list = []
+        scalar_c_list = []
         start_points[i] = np.random.uniform(bcsd_lb, bcsd_ub)
+        for g in range(grain_samples):
+            bi = random.uniform(0, 1)
+            ci = random.uniform(0, 1)
+            scalar_b_list.append(np.repeat(bi, sizep, axis=0))
+            scalar_c_list.append(np.repeat(ci, sizep, axis=0))
+        b = np.hstack(tuple(scalar_b_list))
+        c = np.hstack(tuple(scalar_c_list))
+        start_points[i, 2:sizep*grain_samples+2] = b
+        start_points[i, sizep*grain_samples+2:sizep*grain_samples*2+2] = c
 
     bounds = np.row_stack((bcsd_lb, bcsd_ub))
     solutions = []
     #For each start point - minimize the least square error and append it to solutions.
 
     valcnt = 6 if hapke.needs_bg else 4
-    _, axes = plt.subplots(figsize=(17,grain_samples*3), nrows=grain_samples, ncols=valcnt)
+    _, axes = plt.subplots(figsize=(12,grain_samples*2), nrows=grain_samples, ncols=valcnt)
     fig1, ax1 = plt.subplots(figsize=(6,4), frameon=False)
 
     axes[0,0].set_title('Converged b')
@@ -1148,20 +1166,27 @@ def solve_phase(phase_files, params):
 
     ## Plotting the best solution
     best_soln = min(solutions, key=lambda res: res.cost).x
-    brc, bscale, boffset = phase_rc(best_soln, hapke, sizep, grain_samples, phaseAngleCount, favk, fav_wave, favn, ff)
+    brc, bscat, bscale, boffset = phase_rc(best_soln, hapke, sizep, grain_samples, phaseAngleCount, favk, fav_wave, favn, ff)
 
-    fig2, ax2 = plt.subplots(figsize=(8,6), frameon=False)
+    fig2, (ax2,ax3) = plt.subplots(figsize=(10,4), ncols=2, sharex =True, frameon=False)
+
     for i in range(nfiles):
         ax2.plot(wave, longphasedata[i], '-b', label='LPD-'+str(i+1))
         ax2.plot(wave, brc[i], ':r', label='RC-'+str(i+1))
+        ax3.plot(wave, bscat[i], '-', label="Scat-"+str(i+1))
+        plt_data.append(['Scat-'+str(i+1), wave, bscat[i]])
         plt_data.append(['RC-'+str(i+1), wave, brc[i]])
         plt_data.append(['LPD-'+str(i+1), wave, longphasedata[i]])
     ax2.set_xlabel('Wavelength')
+    ax3.set_xlabel('Wavelength')
+    ax3.set_ylabel('Scattering Efficiency')
+    ax3.set_title('Wavelength Vs Scat. Eff')
     ax2.set_ylabel('Reflectance')
     ax2.set_title('Wavelength vs Reflectance')
     rc = mpatches.Patch(color='red', label='Model')
     lpd = mpatches.Patch(color='blue', label='Data')
-    plt.legend(handles=[rc, lpd])
+    ax2.legend(handles=[rc, lpd])
+    ax3.legend()
 
     allbest = (best_soln, bscale, boffset, k, wave, n)
 
@@ -1203,7 +1228,7 @@ def phase_rc(coefp, hapke, sizep, grain_samples, phaseAngleCount, favk, fav_wave
         scat = hapke.scattering_efficiency(favks, fav_wave, d, s, favn)
         rc = hapke.radiance_coeff(scat, allb, allc, ff, b0, h)
 
-        return rc, scale, offset
+        return rc, scat, scale, offset
 
 
 def Hapke_mastermind(params):
@@ -1239,7 +1264,11 @@ def Hapke_mastermind(params):
 
   #Initialize random start points
   for i in range(1, spts):
+    offset = random.uniform(constants.K_OFFSET_LOWBOUND, constants.K_OFFSET_UPBOUND)
+    scale = random.uniform(constants.K_SCALE_LOWBOUND,constants.K_SCALE_UPBOUND)
+    randk = (scale * k) + offset
     start_points[i] = np.random.uniform(lb, ub)
+    start_points[i, total_guesses:] = randk
 
   bounds = np.row_stack((lb, ub))
 
