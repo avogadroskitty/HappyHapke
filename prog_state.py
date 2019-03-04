@@ -290,12 +290,13 @@ class ProgramState(object):
     msg = 'Finished %d iterations: ' % len(solns)
     return msg, 'k-global', [fig1, fig2, fig3]
 
-  def add_mir_data(self, mirk_file='', mirv_file='', adjType=3):
+  def add_mir_data(self, mirk_file='', mirv_file='', repk_file='', adjType=3):
     mirk_file = mirk_file or '../data/bytMIRk.mat'
     mirv_file = mirv_file or '../data/bytMIRv.mat'
+    k = analysis.loadmat_single(repk_file)[:,1] if repk_file else self.ks['global']
+    self.ks['global'] = k # if from file we over-write it otherwise this is redundant.
 
     wave = self.pp_spectra['file2'][:,0]
-    k = self.ks['global']
     plt.close('all')  # hack!
     pltData, kset = analysis.MasterKcombine(mirk_file, mirv_file, wave, k, adjType)
     self.vnirv, self.vnirk, self.fullv, self.fullk = kset

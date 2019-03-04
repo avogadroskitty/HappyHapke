@@ -319,9 +319,11 @@ $(document).ready(WebUI('{{host}}', '{{uid}}'));
                         Matlab MAT-files containing a single matrix each.
                         Wavelength units should be either nm or microns (not wavenumbers).
                     </p>
-                    <label class="inplbl"><input type='file' name='mirv_file' />MIR wavelength (v)</label>
-                    <label class="inplbl"><input type='file' name='mirk_file' />MIR dispersion (k)</label>
-
+                    <div class="inp">
+                        <label class="inplbl"><input type='file' name='mirv_file' />MIR wavelength (v)</label>
+                        <label class="inplbl"><input type='file' name='mirk_file' />MIR dispersion (k)</label>
+                        <label class="inplbl"><input type='file' name='repk_file' />Repeat (k) [Minimized from the last section]</label>
+                    </div>
                     <div class="inp">
                         <label class="inplbl">
                             Adjustment Type:

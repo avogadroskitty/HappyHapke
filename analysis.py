@@ -1288,13 +1288,13 @@ def Hapke_mastermind(params):
             dax = axes[i,1]
 
         if si == (spts-1):
-            sax.plot(range(spts),allsp_s[i],'-x')
-            dax.plot(range(spts),allsp_d[i],'-x')
+            sax.plot(range(spts),allsp_s[i],'-o')
+            dax.plot(range(spts),allsp_d[i],'-o')
             plt_data.append(['s_'+str(i), range(spts), allsp_s[i]])
             plt_data.append(['D_'+str(i), range(spts), allsp_d[i]])
             if hapke.needs_bg:
-                b0ax.plot(range(spts), allsp_b0[i], '-x', label="b0")
-                hax.plot(range(spts), allsp_h[i], '-x', label="h")
+                b0ax.plot(range(spts), allsp_b0[i], '-o', label="b0")
+                hax.plot(range(spts), allsp_h[i], '-o', label="h")
                 plt_data.append(['b0_'+str(i), range(spts), allsp_b0[i]])
                 plt_data.append(['h_'+str(i), range(spts), allsp_h[i]])
     sax.set_xlabel('Start Points')
@@ -1310,6 +1310,22 @@ def Hapke_mastermind(params):
                                     frameon=False)
   
   rc = rep_rc(hapke, best_soln, prev_b, prev_c, grain_samples, gsvals, thetai, thetae, ff, wave, k, n)
+
+  for i, key in enumerate(sorted(spectra.keys())):
+      wave, orig = spectra[key].T
+      ax1.plot(wave, orig,label=('%s grain' % key))
+      ax1.plot(wave, rc[i], 'k--')
+      ax1.set_xlabel('Wavelength (um)')
+      ax1.set_ylabel('Reflectance (#)')
+      ax1.set_title('Final fit')
+      ax1.legend(fontsize='small', loc='best')
+
+      ax2.plot(wave, np.abs(rc[i] - orig), lw=1,
+               label=('%s fit' % key))
+      ax2.set_title('Fit error')
+      ax2.set_xlabel('Wavelength (um)')
+      ax2.set_ylabel('Abs. Error')
+      ax2.legend(fontsize='small', loc='best')
 
   ki = best_soln[total_guesses:]
   ax3.semilogy(wave, ki, 'k--', label='best')
