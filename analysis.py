@@ -1167,6 +1167,11 @@ def solve_phase(phase_files, params):
     ## Plotting the best solution
     best_soln = min(solutions, key=lambda res: res.cost).x
     brc, bscat, bscale, boffset = phase_rc(best_soln, hapke, sizep, grain_samples, phaseAngleCount, favk, fav_wave, favn, ff)
+    
+    #Taking only k from fav k
+    bestk = favk[0] * bscale + boffset
+    ax1.semilogy(wave, bestk, label='Best k')
+    plt_data.append(['offk_best-',wave, bestk])
 
     fig2, (ax2,ax3) = plt.subplots(figsize=(10,4), ncols=2, sharex =True, frameon=False)
 
