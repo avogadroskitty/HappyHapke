@@ -1,6 +1,7 @@
 from __future__ import division, print_function
 import copy
 import numpy as np
+import math
 
 class HapkeModel(object):
   def __init__(self, incident_angle, emission_angle, refraction_index,
@@ -32,7 +33,7 @@ class HapkeModel(object):
     self.Se = numer / denom + 0.05
     # approximate internal scattering coefficient S_I
     self.Si = 1.014 - 4 / (n * denom)
-
+     
   def copy(self, incident_angle=None, emission_angle=None,
            refraction_index=None, opposition_surge=None):
     model = copy.copy(self)
@@ -94,41 +95,38 @@ class HapkeModel(object):
       else:
         raise ValueError('Invalid phase_fn: %r' % phase_fn)
   
-  def radiance_coeff(self, scat_eff, b, c, ff=None, b0=None, h=None):
+  def radiance_coeff(self, scat_eff, b, c, ff=1e-11, b0=None, h=None):
       self.Bg1 = self.backscatter(b0,h) + 1 if self.needs_bg else 1
+      # calculate the porosity constant for equant particles (K in Hapke 2008)
+      PoreK = (-np.log(1 - 1.209 * ff**(2/3)))/(1.209 * ff**(2/3))
+      # perform the change of variables to account for porosity outside of H(u)
+      # and H(u0) equations for simplicity, i.e. H(u) will become H(u/PoreK)
+      # see Hapke 2012b (the book) for details.
+      uK = self.u / PoreK
+      u0K = self.u0 / PoreK
+      Hu, Hu0 = self._Hu_Hu0(scat_eff, uK, u0K)
+      Pg = self.single_particle_phase(b, c)         
+      tmp = Pg * self.Bg1 + Hu*Hu0 - 1   
+
       if self.scatter_mixing == 'isotropic':                
-          # calculate the porosity constant for equant particles (K in Hapke 2008)
-          tmp = -1.209 * ff**(2./3)
-          PoreK = np.log1p(tmp) / tmp
-
-          # perform the change of variables to account for porosity outside of H(u)
-          # and H(u0) equations for simplicity, i.e. H(u) will become H(u/PoreK)
-          # see Hapke 2012b (the book) for details.
-          uK = self.u / PoreK
-          u0K = self.u0 / PoreK
-          Hu, Hu0 = self._Hu_Hu0(scat_eff, uK, u0K)
-
-          Pg = self.single_particle_phase(b, c)         
-          tmp = Pg * self.Bg1 + Hu*Hu0 - 1
-          numer = PoreK * tmp * scat_eff
+          numer = PoreK * ( scat_eff / 4. * math.pi) * (self.u / (self.u + self.u0)) * tmp
           return numer / self.rc_denom
 
       elif self.scatter_mixing == 'lambertian':
           #Lambertian Mixing
-          Pg = self.single_particle_phase(b, c)
-          Hu, Hu0 = self._Hu_Hu0(scat_eff, self.u, self.u0)
-          tmp = Pg * self.Bg1 + Hu*Hu0 - 1
           #Hapke1993 equation 10.4
-          return tmp * (scat_eff/4.) / (self.u + self.u0)
+          numer = PoreK * ( scat_eff / 4.) * ( 1 / (self.u + self.u0)) * tmp
+          return numer
       else:
         raise ValueError('Invalid scatter: %r' % scatter)
 
   def set_isow(self, isow):
     self.isow = isow
     self.isoHu, self.isoHu0 = self._Hu_Hu0(isow, self.u, self.u0)
-    self.rc_denom = self.isow * self.isoHu0 * self.isoHu
-
-  def backscatter(self, b0, h):
+    # ((isow./(4*pi))*(u/(u+u0)).*((1)+(isoHu0.*isoHu)-1));
+    self.rc_denom = (self.isow / ( 4. * math.pi)) * (self.u / (self.u + self.u0)) * (1 + (self.isoHu0 * self.isoHu) - 1) 
+         
+  def backscatter(self, b0, h): 
       # Bg = B0/[1+(tan(g/2))/h] 
       if b0 is not None and h is not None:
           return b0 / ( 1 + ((np.tan(self.g / 2))/h)) 

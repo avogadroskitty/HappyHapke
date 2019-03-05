@@ -1030,8 +1030,9 @@ def solve_phase(phase_files, params):
         scalar_c_list = []
         start_points[i] = np.random.uniform(bcsd_lb, bcsd_ub)
         for g in range(grain_samples):
-            bi = random.uniform(0, 1)
-            ci = random.uniform(0, 1)
+            #For constant and legendre it takes leg boundds -- need to have Eli check this
+            bi = random.uniform(constants.DHG_B_LOWBOUND, constants.DHG_B_UPBOUND) if hapke.phase_mixing == 'dhg' else random.uniform(constants.LEG_B_LOWBOUND, constants.LEG_B_UPBOUND)
+            ci = random.uniform(constants.DHG_C_LOWBOUND, constants.DHG_C_UPBOUND) if hapke.phase_mixing == 'dhg' else random.uniform(constants.LEG_C_LOWBOUND, constants.LEG_C_UPBOUND)
             scalar_b_list.append(np.repeat(bi, sizep, axis=0))
             scalar_c_list.append(np.repeat(ci, sizep, axis=0))
         b = np.hstack(tuple(scalar_b_list))
@@ -1231,7 +1232,8 @@ def phase_rc(coefp, hapke, sizep, grain_samples, phaseAngleCount, favk, fav_wave
 
         favks = favk * scale + offset
         scat = hapke.scattering_efficiency(favks, fav_wave, d, s, favn)
-        rc = hapke.radiance_coeff(scat, allb, allc, ff, b0, h)
+        ff_exp = np.repeat(ff, phaseAngleCount, axis=0)[:, np.newaxis]
+        rc = hapke.radiance_coeff(scat, allb, allc, ff_exp, b0, h)
 
         return rc, scat, scale, offset
 
