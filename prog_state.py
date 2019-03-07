@@ -14,7 +14,7 @@ import pickle
 
 class ProgramState(object):
   def initialize(self, phase_fn='legendre', scatter_type='lambertian',
-                 thetai=0, thetae=0, n1=0,
+                 thetai=0, thetae=0, n1=0, 
                  specwave_file='', calspec_file='', **kwargs):  
     
     plt.close('all')  # hack!
@@ -22,9 +22,10 @@ class ProgramState(object):
     specwave_file = specwave_file or '../data/specwave2.mat'
     calspec_file = calspec_file or '../data/calspecw2.mat'
     self.Bg = True if 'Bg' in kwargs else False
+    Hu = True if 'HuApprox' in kwargs else False
      
     self.global_thetai, self.global_thetae = np.deg2rad([float(thetai), float(thetae)])
-    self.hapke_scalar = HapkeModel(self.global_thetai, self.global_thetae, float(n1), self.Bg, phase_fn, scatter_type)
+    self.hapke_scalar = HapkeModel(self.global_thetai, self.global_thetae, float(n1), self.Bg, phase_fn, scatter_type, Hu)
 
     self.spectra = {}
     self.n1 = float(n1)

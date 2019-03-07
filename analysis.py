@@ -78,7 +78,7 @@ def MasterHapke1_PP(hapke, traj, b, c, ff, s, D, key, n, debug_plots=False, b0 =
   # create table of increasing w (single scattering albedo) and use linear
   # interpolation to solve backwards from the real reflectance data
   w = np.linspace(0, 1, table_size, endpoint=False)
-  rc = hapke.radiance_coeff(w, b, c, ff, b0, h)
+  rc = hapke.radiance_coeff(w, b, c, ff, b0, h, forceApprox=True)
   w2 = np.interp(reflect, rc, w)
 
   # use the same trick to back-solve for k from w2, except we have to plug in
@@ -91,9 +91,9 @@ def MasterHapke1_PP(hapke, traj, b, c, ff, s, D, key, n, debug_plots=False, b0 =
 
   if debug_plots:
     # calculate scattering efficiency for each solved k
-    rc2 = hapke.radiance_coeff(w2, b, c, ff, b0, h)
+    rc2 = hapke.radiance_coeff(w2, b, c, ff, b0, h, forceApprox=True)
     ScatAlb = hapke.scattering_efficiency(k, wavelength, D, s, n)
-    rc3 = hapke.radiance_coeff(ScatAlb, b, c, ff, b0, h)
+    rc3 = hapke.radiance_coeff(ScatAlb, b, c, ff, b0, h, forceApprox=True)
 
     #The _ is the figure and the axes object is stores in axes
     fig, axes = plt.subplots(figsize=(10,4), nrows=2, ncols=2, sharex=True)
