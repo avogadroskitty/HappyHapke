@@ -65,8 +65,8 @@ class HapkeModel(object):
     gamma = np.sqrt(1 - scat_eff)
     return (1-gamma) / (1+gamma)
 
-  def _Hu(self, scat_eff, u, r0=None, forceApprox = None):
-    if self.hu_approx or forceApprox: 
+  def _Hu(self, scat_eff, u, r0=None):
+    if self.hu_approx: 
         if r0 is None:
             r0 = self._r0(scat_eff)
           #Hapke 1993 equation 8.57
@@ -101,14 +101,14 @@ class HapkeModel(object):
                       [1.03567, 1.07610, 1.12254, 1.17681, 1.24171, 1.32171, 1.42497, 1.5685, 1.6675, 1.8008, 1.8898, 2.0065, 2.1795, 2.7306],
                       [1.03626, 1.07741, 1.12476, 1.18019, 1.24664, 1.32875, 1.43512, 1.5837, 1.6867, 1.8259, 1.9194, 2.0423, 2.2258, 2.8193],
                       [1.03682, 1.07864, 1.12685, 1.18337, 1.25128, 1.33541, 1.44476, 1.5982, 1.7050, 1.8501, 1.9479, 2.0771, 2.2710, 2.9078]])
-        fn = interpolate.interp2d(u_table, w0_table, h_table.flatten(), kind='cubic')
-        val = fn(u, scat_eff)[:,0]
+        fn = interpolate.interp2d(w0_table, u_table, h_table.T.flatten(), kind='linear')
+        val = fn(scat_eff, u)[:,0]
         return val
 
-  def _Hu_Hu0(self, scat_eff, u, u0, forceApprox = None):
+  def _Hu_Hu0(self, scat_eff, u, u0):
     r0 = self._r0(scat_eff)
-    Hu = self._Hu(scat_eff, u=u, r0=r0, forceApprox = forceApprox)
-    Hu0 = self._Hu(scat_eff, u=u0, r0=r0, forceApprox = forceApprox)
+    Hu = self._Hu(scat_eff, u=u, r0=r0)
+    Hu0 = self._Hu(scat_eff, u=u0, r0=r0)
     return Hu, Hu0
 
   def single_particle_phase(self, b, c):
@@ -127,7 +127,7 @@ class HapkeModel(object):
       else:
         raise ValueError('Invalid phase_fn: %r' % phase_fn)
   
-  def radiance_coeff(self, scat_eff, b, c, ff=1e-11, b0=None, h=None, forceApprox = None):
+  def radiance_coeff(self, scat_eff, b, c, ff=1e-11, b0=None, h=None):
       self.Bg1 = self.backscatter(b0,h) + 1 if self.needs_bg else 1
       # calculate the porosity constant for equant particles (K in Hapke 2008)
       PoreK = (-np.log(1 - 1.209 * ff**(2/3)))/(1.209 * ff**(2/3))
@@ -136,7 +136,7 @@ class HapkeModel(object):
       # see Hapke 2012b (the book) for details.
       uK = self.u / PoreK
       u0K = self.u0 / PoreK
-      Hu, Hu0 = self._Hu_Hu0(scat_eff, uK, u0K, forceApprox=forceApprox)
+      Hu, Hu0 = self._Hu_Hu0(scat_eff, uK, u0K)
       Pg = self.single_particle_phase(b, c)         
       tmp = Pg * self.Bg1 + Hu*Hu0 - 1   
 
@@ -152,9 +152,9 @@ class HapkeModel(object):
       else:
         raise ValueError('Invalid scatter: %r' % scatter)
 
-  def set_isow(self, isow, forceApprox = None):
+  def set_isow(self, isow):
     self.isow = isow
-    self.isoHu, self.isoHu0 = self._Hu_Hu0(isow, self.u, self.u0, forceApprox = forceApprox)
+    self.isoHu, self.isoHu0 = self._Hu_Hu0(isow, self.u, self.u0)
     # ((isow./(4*pi))*(u/(u+u0)).*((1)+(isoHu0.*isoHu)-1));
     self.rc_denom = (self.isow / ( 4. * math.pi)) * (self.u / (self.u + self.u0)) * (1 + (self.isoHu0 * self.isoHu) - 1) 
          
