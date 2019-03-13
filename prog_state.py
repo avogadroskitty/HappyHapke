@@ -11,7 +11,7 @@ import analysis
 from hapke_model import HapkeModel
 from phaseangle import PhaseAngleObj
 import pickle
-
+  
 class ProgramState(object):
   def initialize(self, phase_fn='legendre', scatter_type='lambertian',
                  thetai=0, thetae=0, n1=0, 
@@ -108,7 +108,7 @@ class ProgramState(object):
     plt.close('all')  # hack!
     b0 = None
     h = None
-    for i, key in enumerate(self.pp_spectra):
+    for i, key in enumerate(sorted(self.pp_spectra)):
         for k,v in kwargs.items():
             if key in k.lower():
                 if 'b_' in k:

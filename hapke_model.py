@@ -79,7 +79,7 @@ class HapkeModel(object):
     else: 
         w0_table = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.925, 0.95, 0.975, 1.0])
         u_table = np.array([0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 1.0])
-        #h = 21, 14 (u, w)
+        # u = x, w0 = y, h = z (xsize,ysize) scipy.interpolate.RectBivariateSpline(x, y, z, bbox=[None, None, None, None], kx=3, ky=3, s=0)
         h_table = np.array([[1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.],
                       [1.00783, 1.01608, 1.02484, 1.03422, 1.04439, 1.05544, 1.06780, 1.0820, 1.0903, 1.0999, 1.1053, 1.1117, 1.1196, 1.1368],
                       [1.01238, 1.02562, 1.03989, 1.05535, 1.07241, 1.09137, 1.11306, 1.1388, 1.1541, 1.1722, 1.1828, 1.1952, 1.2111, 1.2474],
@@ -101,8 +101,13 @@ class HapkeModel(object):
                       [1.03567, 1.07610, 1.12254, 1.17681, 1.24171, 1.32171, 1.42497, 1.5685, 1.6675, 1.8008, 1.8898, 2.0065, 2.1795, 2.7306],
                       [1.03626, 1.07741, 1.12476, 1.18019, 1.24664, 1.32875, 1.43512, 1.5837, 1.6867, 1.8259, 1.9194, 2.0423, 2.2258, 2.8193],
                       [1.03682, 1.07864, 1.12685, 1.18337, 1.25128, 1.33541, 1.44476, 1.5982, 1.7050, 1.8501, 1.9479, 2.0771, 2.2710, 2.9078]])
-        fn = interpolate.interp2d(w0_table, u_table, h_table.T.flatten(), kind='linear')
-        val = fn(scat_eff, u)[:,0]
+        fn = interpolate.RectBivariateSpline(u_table, w0_table, h_table, bbox=[None, None, None, None], kx=3, ky=3, s=0)
+        if isinstance(u, float):
+            u = np.array([u])
+            val = fn(u, scat_eff, grid=False)
+        else:
+            val = fn(u, scat_eff, grid=False)
+        #.flatten()[:, np.newaxis]     
         return val
 
   def _Hu_Hu0(self, scat_eff, u, u0):
@@ -141,13 +146,13 @@ class HapkeModel(object):
       tmp = Pg * self.Bg1 + Hu*Hu0 - 1   
 
       if self.scatter_mixing == 'isotropic':                
-          numer = PoreK * ( scat_eff / 4. * math.pi) * (self.u / (self.u + self.u0)) * tmp
+          numer = PoreK * ( scat_eff / 4. * math.pi) * (uK / (uK + u0K)) * tmp #cannot use self.u and self.u0 here
           return numer / self.rc_denom
 
       elif self.scatter_mixing == 'lambertian':
           #Lambertian Mixing
           #Hapke1993 equation 10.4
-          numer = PoreK * ( scat_eff / 4.) * ( 1 / (self.u + self.u0)) * tmp
+          numer = PoreK * ( scat_eff / 4.) * ( 1 / (uK + u0K)) * tmp
           return numer
       else:
         raise ValueError('Invalid scatter: %r' % scatter)

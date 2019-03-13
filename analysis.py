@@ -69,7 +69,7 @@ def preprocess_traj(traj, low, high, UV, fit_order=0, idx = 3):
 #Solving for K - Logic -- setup the matrices here. For plotting get values from the hapke object - defined in hapke_model.py
 def MasterHapke1_PP(hapke, traj, b, c, ff, s, D, key, n, debug_plots=False, b0 = None, h = None):
   wavelength, reflect = traj.T
-  table_size = len(traj) * 2
+  table_size = len(traj) #* 2
 
   # make sure we have a scalar isow
   if hapke.needs_isow:
@@ -77,7 +77,7 @@ def MasterHapke1_PP(hapke, traj, b, c, ff, s, D, key, n, debug_plots=False, b0 =
 
   # create table of increasing w (single scattering albedo) and use linear
   # interpolation to solve backwards from the real reflectance data
-  w = np.linspace(0.1, 1, table_size, endpoint=False)
+  w = np.linspace(0.1, 1, table_size, endpoint=True)
   rc = hapke.radiance_coeff(w, b, c, ff, b0, h)
   w2 = np.interp(reflect, rc, w)
 
@@ -91,7 +91,8 @@ def MasterHapke1_PP(hapke, traj, b, c, ff, s, D, key, n, debug_plots=False, b0 =
 
   if debug_plots:
     # calculate scattering efficiency for each solved k
-    rc2 = hapke.radiance_coeff(w2, b, c, ff, b0, h)
+    rc2 = hapke.radiance_coeff(w2, b, c, ff, b0, h) 
+    #what did rc2  even go into????
     ScatAlb = hapke.scattering_efficiency(k, wavelength, D, s, n)
     rc3 = hapke.radiance_coeff(ScatAlb, b, c, ff, b0, h)
 
