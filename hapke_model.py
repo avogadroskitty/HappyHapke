@@ -104,9 +104,8 @@ class HapkeModel(object):
         fn = interpolate.RectBivariateSpline(u_table, w0_table, h_table, bbox=[None, None, None, None], kx=3, ky=3, s=0)
         if isinstance(u, float):
             u = np.array([u])
-            val = fn(u, scat_eff, grid=False)
-        else:
-            val = fn(u, scat_eff, grid=False)
+           
+        val = fn(u, scat_eff, grid=False)
         #.flatten()[:, np.newaxis]     
         return val
 
@@ -122,11 +121,11 @@ class HapkeModel(object):
         return 1 + b * self.cosg + c * (1.5*(self.cosg**2)-0.5)
       elif self.phase_mixing == 'dhg':
         # double Heyney-Greenstein phase function P(g)
-        x0 = b * b + 1
+        x0 = b * b
         x1 = 2 * b * self.cosg
-        x3 = (x0 - x1) ** 1.5
-        x4 = (x0 + x1) ** 1.5
-        return (x0 - 2) * (x3*(c-1) - x4*(c+1)) / (2 * x3 * x4)
+        x2 = (1 + x1 + x0) ** 1.5
+        x3 = (1 - x1 + x0) ** 1.5
+        return (1-c) * (1-x0) / x2 + c * (1-x0) / x3
       elif self.phase_mixing == 'constant':
         return 1
       else:

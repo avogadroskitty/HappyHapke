@@ -808,7 +808,8 @@ def solve_phase(phase_files, params):
     #Next it selects the second column from the phase file
     #Next it cuts off the rows from lowind to highind
     #once this is done phase data is now of shape nfiles,prow2,1
-    phasedata = np.reshape(full_phase, (nfiles, prow, pcol))[:,:,1][lowind:highind] #phasedata = nfiles, prow2
+    cut_phasedata = np.reshape(full_phase, (nfiles, prow, pcol))[:,:,1] #phasedata = nfiles, prow2
+    phasedata = cut_phasedata[:,lowind:highind]
 
     #extend data into UV based on assumptions
     #extrapolate left side of k to 0.2 using ahrekiel's constant method
