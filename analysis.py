@@ -229,7 +229,7 @@ def MasterKcombine(mir_k, mir_v, wavelength, global_k, adjType):
     #Plot vnirk vs wavelength -- 
     #If you are changing anything here please change in no_mir_data() where the same is plotted
     ax2 = axes[0,1]
-    ax2.plot(lam, vnirk)
+    ax2.semilogy(lam, vnirk)
     ax2.set_ylabel('k')
     ax2.set_xlabel('Wavelength(um)')
     ax2.set_title('VNIR k')
