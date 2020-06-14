@@ -42,6 +42,8 @@ class ProgramState(object):
     self.guesses = {}
     self.scat_eff_grain = {}
 
+    self.tmp, self.scat, self.rc = None, {}, {}
+
     if self.hapke_scalar.needs_isow:
       # store the calibration spectrum
       specwave = analysis.loadmat_single(specwave_file).ravel()
@@ -198,11 +200,11 @@ class ProgramState(object):
     self.bounds = (lb, ub)
     self.global_ff = ff
     # solve
-    tmp = analysis.MasterHapke2_PP(
+    self.tmp = analysis.MasterHapke2_PP(
         self.hapke_vector_isow, self.pp_spectra, guesses, lb, ub, ff, self.n1, self.valcnt,
          int(spts), int(maxfun),  float(diff_step), float(funtol), float(xtol), tr_solver='lsmr', verbose=2)
-    solns = [res.x for res in tmp]
-    best_soln = min(tmp, key=lambda res: res.cost).x
+    solns = [res.x for res in self.tmp]
+    best_soln = min(self.tmp, key=lambda res: res.cost).x
 
     # save the best solution
     self.ks['global'] = best_soln[total_guesses:]
@@ -260,18 +262,18 @@ class ProgramState(object):
           b, c, s, D, b0, h = best_soln[i:total_guesses:no_of_grain_samples]
       else:
           b, c, s, D = best_soln[i:total_guesses:no_of_grain_samples]
-      scat = self.hapke_vector_isow.scattering_efficiency(best_soln[total_guesses:], wave,
+      self.scat[key] = self.hapke_vector_isow.scattering_efficiency(best_soln[total_guesses:], wave,
                                                           D, s, self.n1)
-      rc = self.hapke_vector_isow.radiance_coeff(scat, b, c, ff[i], b0, h)
+      self.rc[key] = self.hapke_vector_isow.radiance_coeff(self.scat[key], b, c, ff[i], b0, h)
 
       ax1.plot(wave, orig,label=('%s grain' % key))
-      ax1.plot(wave, rc, 'k--')
+      ax1.plot(wave, self.rc[key], 'k--')
       ax1.set_xlabel('Wavelength (um)')
       ax1.set_ylabel('Reflectance (#)')
       ax1.set_title('Final fit')
       ax1.legend(fontsize='small', loc='best')
 
-      ax2.plot(wave, np.abs(rc - orig), lw=1,
+      ax2.plot(wave, np.abs(self.rc[key] - orig), lw=1,
                label=('%s fit' % key))
       ax2.set_title('Fit error')
       ax2.set_xlabel('Wavelength (um)')
@@ -289,7 +291,7 @@ class ProgramState(object):
     ax.legend(fontsize='small', loc='best')
 
     msg = 'Finished %d iterations: ' % len(solns)
-    return msg, 'k-global', [fig1, fig2, fig3]
+    return msg, 'k-global', [fig1, fig2, fig3] # The Download param for this section
 
   def add_mir_data(self, mirk_file='', mirv_file='', repk_file='', adjType=3):
     mirk_file = mirk_file or '../data/bytMIRk.mat'
@@ -472,10 +474,39 @@ class ProgramState(object):
           zf.writestr(fname, _traj2bytes(self.pp_spectra[key]))
       return 'preprocessed.zip', 'application/zip', buf.getvalue()
     elif param.startswith('k-'): # Global k step
-      key = param.split('-', 1)[1]
-      fname = 'k_%s.txt' % names[key]
-      print_vec = _vec2bytes(self.ks[key])
-      return fname, 'text/plain', print_vec
+      #key = param.split('-', 1)[1]
+      #fname = 'k_%s.txt' % names[key]
+      #print_vec = _vec2bytes(self.ks[key])
+      #return fname, 'text/plain', print_vec
+
+      ############################################
+      ## June 14 2020 - Identified we need more data downloaded from global-k
+      ############################################
+
+      buf = BytesIO()
+      with ZipFile(buf, mode='w') as zf:
+        solns = [res.x for res in self.tmp]
+        for i, resx in enumerate(solns): # All the solutions
+            file = 'soln_%s.txt' % (str(i))
+            zf.writestr(file, _vec2bytes(resx))
+
+        ls_resx_cost = [res.cost for res in self.tmp]
+        costfile = "all_solns_cost_file.txt"
+        zf.writestr(costfile, _vec2bytes(ls_resx_cost))
+
+        for i, key in enumerate(sorted(self.spectra.keys())):
+            wave, orig = self.pp_spectra[key].T
+            scat_grain = self.scat[key]
+            rc_grain = self.rc[key]
+            orig_file = 'orig_%s.txt' % (key)
+            zf.writestr(orig_file, _plot2bytes(wave, orig))
+            rc_file = 'rc_%s.txt' % (key)
+            zf.writestr(rc_file, _plot2bytes(wave, rc_grain))
+            scat_file = 'scat_%s.txt' % (key)
+            zf.writestr(scat_file, _plot2bytes(wave, scat_grain))
+
+      return 'global_k_data.zip', 'application/zip', buf.getvalue()
+
     elif param == 'guessk': #For all individual ks
         buf = BytesIO()
         with ZipFile(buf, mode='w') as zf:

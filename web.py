@@ -26,7 +26,7 @@ rc('axes.spines', top=False)
 #Main Program that runs the server on the local machine on the specified port
 def main():
   ap = ArgumentParser()
-  ap.add_argument('--port', type=int, default=41414, help='Port. [%(default)s]')
+  ap.add_argument('--port', type=int, default=41415, help='Port. [%(default)s]')
   args = ap.parse_args()
 
   logging.basicConfig(level=logging.INFO)
@@ -56,7 +56,7 @@ class HapkeHandler(tornado.web.RequestHandler):
   def _handle_download(self):
     uid = self.get_argument('uid')
     state = self.application.prog_states[uid]
-    param = self.get_argument('p')
+    param = self.get_argument('p') # retrieves p from the url 
     fname, mimetype, data = state._download_data(param)
     self.set_header('Content-Type', mimetype)
     self.set_header('Content-Disposition', 'attachment; filename=' + fname)
@@ -114,7 +114,7 @@ class HapkeHandler(tornado.web.RequestHandler):
         # run the section method    
     logging.info('Running %s: %r', section, kwargs)
     try:
-      #Calling each function at run time
+      #Calling each function at run time - each function in prog_state will return the msg, download_param and figures to display
       message, dl_param, figures = getattr(state, section)(**kwargs)
     except EnvironmentError as e:
       logging.exception('Section %s failed.', section)
@@ -131,7 +131,7 @@ class HapkeHandler(tornado.web.RequestHandler):
     self.write('<input type="hidden" id="uid_val" value="%s" />' % uid);
     if message:
       self.write(message)
-    if dl_param:
+    if dl_param: # This is the link that gets generated for the download - p is the download_param
       self.write('<a href="/?dl=1&uid=%s&p=%s" target="_blank">Download</a>' %
                  (uid, dl_param))
       self.write('<a href="/?cp=1&uid=%s" target="_blank">Download Checkpoint</a>' %
